@@ -10,7 +10,7 @@ import {
   loginWithGoogle
 } from "../lib/services/authService";
 import { InquiryData } from "../lib/services/inquiryService";
-import { Lock, User, Loader2, LogOut, Menu, X, Receipt, FileText, UserPlus, CircleDollarSign, GraduationCap, TrendingUp, BarChart3, Clock } from "lucide-react";
+import { Lock, User, Loader2, LogOut, Menu, X, Receipt, FileText, UserPlus, CircleDollarSign, GraduationCap, TrendingUp, BarChart3, Clock, Award } from "lucide-react";
 
 // UI Components
 import Sidebar from "../components/Sidebar";
@@ -309,6 +309,14 @@ export default function Home() {
                       </button>
                     );
                   })}
+                  <div className="border-t border-slate-900 my-2 pt-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Tools</div>
+                  <a
+                    href="/admin/certificate-builder"
+                    className="w-full text-left px-4 py-2.5 text-xs font-semibold rounded-xl transition-colors flex items-center gap-2.5 cursor-pointer text-slate-400 hover:bg-slate-900/50"
+                  >
+                    <Award className="h-4.5 w-4.5 text-teal-400" />
+                    <span>Certificate Builder</span>
+                  </a>
                 </>
               )}
 
