@@ -35,6 +35,8 @@ interface PaymentViewProps {
   initialTotalFees: number | null;
   initialReceiptNo: string | null;
   initialCourseDuration?: string;
+  initialGuardianName?: string;
+  initialGuardianRelation?: string;
   onGoBack: () => void;
   onProceedToReceipt: (receiptNo: string, enrollmentId: string) => void;
 }
@@ -60,6 +62,8 @@ export default function PaymentView({
   initialTotalFees,
   initialReceiptNo,
   initialCourseDuration,
+  initialGuardianName,
+  initialGuardianRelation,
   onGoBack,
   onProceedToReceipt
 }: PaymentViewProps) {
@@ -67,6 +71,9 @@ export default function PaymentView({
   const [studentName, setStudentName] = useState(initialStudentName || "");
   const [enrollmentId, setEnrollmentId] = useState(initialEnrollmentId || "");
   const [courseName, setCourseName] = useState(initialCourseName || "");
+
+  const [guardianName, setGuardianName] = useState(initialGuardianName || "");
+  const [guardianRelation, setGuardianRelation] = useState(initialGuardianRelation || "");
 
   const [dbCourseDuration, setDbCourseDuration] = useState("");
   const [dbTotalFees, setDbTotalFees] = useState<number | null>(null);
@@ -144,6 +151,8 @@ export default function PaymentView({
         setBranch(res.branch || "MAIN");
         if (res.courseDuration) setDbCourseDuration(res.courseDuration);
         if (res.totalCourseFees) setDbTotalFees(res.totalCourseFees);
+        if (res.guardianName) setGuardianName(res.guardianName);
+        if (res.guardianRelation) setGuardianRelation(res.guardianRelation);
         await checkExistingSchedule(enrollmentId.trim());
       } else {
         setErrorMsg("Enrollment ID not found in database.");
@@ -200,8 +209,9 @@ export default function PaymentView({
         });
       }
       for (let i = 1; i <= partialTenure; i++) {
-        const nextMonth = new Date();
-        nextMonth.setMonth(today.getMonth() + i);
+        const nextMonth = new Date(today.getFullYear(), today.getMonth() + i, 1);
+        const maxDays = new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 0).getDate();
+        nextMonth.setDate(Math.min(today.getDate(), maxDays));
         let amount = 0;
         if (i === partialTenure) {
           const totalSoFar = partialInitial + (partialEMIAmount * (partialTenure - 1)) + partialRemainder;
@@ -230,8 +240,9 @@ export default function PaymentView({
       }
       let remaining = emiDiscountedTotal - emiDownPayment;
       for (let i = 1; i <= emiTenure; i++) {
-        const nextMonth = new Date();
-        nextMonth.setMonth(today.getMonth() + i);
+        const nextMonth = new Date(today.getFullYear(), today.getMonth() + i, 1);
+        const maxDays = new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 0).getDate();
+        nextMonth.setDate(Math.min(today.getDate(), maxDays));
         const amount = i === emiTenure ? remaining : emiEMIAmount;
         remaining -= amount;
         scheduleArray.push({
@@ -739,6 +750,8 @@ export default function PaymentView({
                 receiptNo,
                 branch,
                 admissionFee: config.admission_fee ?? 5000,
+                guardianName,
+                guardianRelation,
               });
               onProceedToReceipt(receiptNo, enrollmentId);
             }}

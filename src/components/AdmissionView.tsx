@@ -25,7 +25,17 @@ interface AdmissionViewProps {
   userProfile: UserProfile | null;
   inquiryData: InquiryData | null;
   onGoBack: () => void;
-  onAdmissionComplete: (enrollmentId: string, studentName: string, courseName: string, totalFees: number, branch: string, receiptNo: string) => void;
+  onAdmissionComplete: (
+    enrollmentId: string,
+    studentName: string,
+    courseName: string,
+    totalFees: number,
+    branch: string,
+    receiptNo: string,
+    courseDuration?: string,
+    guardianName?: string,
+    guardianRelation?: string
+  ) => void;
 }
 
 // Course configurations per branch location (fallback when Firestore is unavailable)
@@ -310,7 +320,9 @@ export default function AdmissionView({
         calculatedTotalFees,
         branch,
         receiptNumber,
-        config.duration
+        config.duration,
+        guardianName,
+        guardianRelation
       );
     } else {
       setErrorMsg(res.message);

@@ -142,7 +142,9 @@ export default function Home() {
     totalFees: number,
     branch: string,
     receiptNo: string,
-    courseDuration?: string
+    courseDuration?: string,
+    guardianName?: string,
+    guardianRelation?: string
   ) => {
     setPaymentContext({
       enrollmentId,
@@ -150,7 +152,9 @@ export default function Home() {
       courseName,
       totalFees,
       receiptNo,
-      courseDuration
+      courseDuration,
+      guardianName,
+      guardianRelation
     });
     setActiveTab("payment");
   };
@@ -160,16 +164,21 @@ export default function Home() {
     studentName: string,
     courseName: string,
     totalFees: number,
-    receiptNo: string,
-    courseDuration?: string
+    branch: string,
+    receiptNo?: string,
+    courseDuration?: string,
+    guardianName?: string,
+    guardianRelation?: string
   ) => {
     setPaymentContext({
       enrollmentId,
       studentName,
       courseName,
       totalFees,
-      receiptNo,
-      courseDuration
+      receiptNo: receiptNo || "",
+      courseDuration,
+      guardianName,
+      guardianRelation
     });
     setActiveTab("payment");
   };
@@ -361,6 +370,8 @@ export default function Home() {
                 initialTotalFees={paymentContext.totalFees}
                 initialReceiptNo={paymentContext.receiptNo}
                 initialCourseDuration={paymentContext.courseDuration}
+                initialGuardianName={paymentContext.guardianName}
+                initialGuardianRelation={paymentContext.guardianRelation}
                 onGoBack={handleGoBackFromPayment}
                 onProceedToReceipt={handleProceedToReceipt}
               />

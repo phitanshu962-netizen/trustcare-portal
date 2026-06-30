@@ -89,7 +89,9 @@ export async function getStudentDataByEnrollmentId(enrollmentId: string) {
         branch: data.branch || "kurla",
         courseDuration: data.courseDuration || "",
         totalCourseFees: data.totalCourseFees || 0,
-        admissionFee: data.admissionFee || 0
+        admissionFee: data.admissionFee || 0,
+        guardianName: data.guardianName || "",
+        guardianRelation: data.guardianRelation || ""
       };
     }
 
