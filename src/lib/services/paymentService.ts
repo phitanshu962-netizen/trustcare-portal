@@ -252,6 +252,10 @@ export async function saveInstallmentPayment(data: {
   loggedInUser: string;
 }) {
   try {
+    if (!data.enrollmentId) {
+      return { success: false, message: "Enrollment ID is required to save an installment payment." };
+    }
+
     const paymentRef = doc(db, "installmentPayments", data.enrollmentId);
     const paymentDoc = await getDoc(paymentRef);
 

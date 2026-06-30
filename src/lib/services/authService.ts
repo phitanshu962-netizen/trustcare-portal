@@ -18,6 +18,8 @@ export interface UserProfile {
   branch: "kurla" | "thane" | "nalasapora" | "karad";
 }
 
+const ADMIN_EMAILS = ["phitanshu962@gmail.com", "harshnpc21@gmail.com"];
+
 // Convert a username to a standardized email for Firebase Auth
 export function usernameToEmail(username: string): string {
   return `${username.toLowerCase().trim()}@trustcare.com`;
@@ -83,14 +85,19 @@ export async function loginUser(username: string, password: string): Promise<Use
       uid,
       email,
       username: username.split("@")[0],
-      role: "admin", // fallback to admin
+      role: ADMIN_EMAILS.includes(email) ? "admin" : "staff", // updated fallback based on email
       branch: "kurla"
     };
     await setDoc(doc(db, "users", uid), defaultProfile);
     return defaultProfile;
   }
   
-  return userDoc.data() as UserProfile;
+  const profile = userDoc.data() as UserProfile;
+  if (ADMIN_EMAILS.includes(email) && profile.role !== "admin") {
+    profile.role = "admin";
+    await setDoc(doc(db, "users", uid), { role: "admin" }, { merge: true });
+  }
+  return profile;
 }
 
 // Sign out from the application
@@ -102,16 +109,22 @@ export async function logoutUser(): Promise<void> {
 export function subscribeToAuth(callback: (user: FirebaseUser | null, profile: UserProfile | null) => void) {
   return onAuthStateChanged(auth, async (user) => {
     if (user) {
+      const email = user.email || "";
       const userDoc = await getDoc(doc(db, "users", user.uid));
       if (userDoc.exists()) {
-        callback(user, userDoc.data() as UserProfile);
+        const profile = userDoc.data() as UserProfile;
+        if (ADMIN_EMAILS.includes(email) && profile.role !== "admin") {
+           profile.role = "admin";
+           setDoc(doc(db, "users", user.uid), { role: "admin" }, { merge: true });
+        }
+        callback(user, profile);
       } else {
         // Fallback profile
         callback(user, {
           uid: user.uid,
-          email: user.email || "",
-          username: (user.email || "").split("@")[0],
-          role: "admin",
+          email,
+          username: email.split("@")[0],
+          role: ADMIN_EMAILS.includes(email) ? "admin" : "staff",
           branch: "kurla"
         });
       }
@@ -127,14 +140,16 @@ export async function loginWithGoogle(): Promise<UserProfile> {
   const userCredential = await signInWithPopup(auth, provider);
   const user = userCredential.user;
   
+  const email = user.email || "";
+  
   const userDoc = await getDoc(doc(db, "users", user.uid));
   if (!userDoc.exists()) {
     const profile: UserProfile = {
       uid: user.uid,
-      email: user.email || "",
-      username: (user.displayName || user.email || "").split("@")[0].replace(/\s+/g, "_").toLowerCase(),
-      role: "staff", // Default role for Google login
-      branch: "kurla" // Default branch for Google login
+      email,
+      username: (user.displayName || email).split("@")[0].replace(/\s+/g, "_").toLowerCase(),
+      role: ADMIN_EMAILS.includes(email) ? "admin" : "staff",
+      branch: "kurla"
     };
     await setDoc(doc(db, "users", user.uid), {
       ...profile,
@@ -143,5 +158,11 @@ export async function loginWithGoogle(): Promise<UserProfile> {
     return profile;
   }
   
-  return userDoc.data() as UserProfile;
+  const profile = userDoc.data() as UserProfile;
+  if (ADMIN_EMAILS.includes(email) && profile.role !== "admin") {
+    profile.role = "admin";
+    await setDoc(doc(db, "users", user.uid), { role: "admin" }, { merge: true });
+  }
+  
+  return profile;
 }

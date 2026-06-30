@@ -11,7 +11,8 @@ import {
   Clock, 
   LogOut, 
   Search, 
-  ShieldCheck 
+  ShieldCheck,
+  Award
 } from "lucide-react";
 
 interface SidebarProps {
@@ -147,6 +148,19 @@ export default function Sidebar({
                 </button>
               );
             })}
+            
+            <div className="pt-2">
+              <p className="px-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2 mt-2">Tools (Admin)</p>
+              <a
+                href="/admin/certificate-builder"
+                className={`w-full flex items-center gap-3 px-3 py-2.5 text-xs font-semibold rounded-xl transition-all duration-200 focus:outline-none hover-lift border text-slate-400 hover:bg-slate-900/40 hover:text-slate-200 border-transparent`}
+              >
+                <div className="flex items-center justify-center w-5 h-5">
+                  <Award className="h-4.5 w-4.5" />
+                </div>
+                <span>Certificate Builder</span>
+              </a>
+            </div>
           </div>
         )}
       </nav>

@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { UserProfile } from "../lib/services/authService";
+import { db } from "../lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
 import { 
   getStudentDataByEnrollmentId, 
   saveCoursePayment, 
@@ -203,16 +205,94 @@ export default function PaymentView({
   // Calculations for Partial Payment
   const partialDiscountedTotal = Math.max(0, totalFees - discountRupees);
   const partialRemaining = Math.max(0, partialDiscountedTotal - partialInitial);
-  const partialEMIAmount = partialRemaining > 0 ? Math.ceil(partialRemaining / partialTenure) : 0;
-  const partialTotalPayable = partialInitial + (partialEMIAmount * partialTenure);
+  const partialEMIAmount = partialRemaining > 0 ? Math.floor(partialRemaining / partialTenure) : 0;
+  const partialRemainder = partialRemaining > 0 ? partialRemaining % partialTenure : 0;
+  const partialTotalPayable = partialInitial + partialRemaining;
   const partialDiscountPercent = totalFees > 0 ? ((discountRupees / totalFees) * 100).toFixed(1) : "0";
 
   // Calculations for EMI Payment
   const emiDiscountedTotal = Math.max(0, totalFees - discountRupees);
   const emiRemaining = Math.max(0, emiDiscountedTotal - emiDownPayment);
-  const emiEMIAmount = emiRemaining > 0 ? Math.ceil(emiRemaining / emiTenure) : 0;
-  const emiTotalPayable = emiDownPayment + (emiEMIAmount * emiTenure);
+  const emiEMIAmount = emiRemaining > 0 ? Math.floor(emiRemaining / emiTenure) : 0;
+  const emiRemainder = emiRemaining > 0 ? emiRemaining % emiTenure : 0;
+  const emiTotalPayable = emiDownPayment + emiRemaining;
   const emiDiscountPercent = totalFees > 0 ? ((discountRupees / totalFees) * 100).toFixed(1) : "0";
+
+  // Dynamic Installment Schedule Calculation (Derived State when not locked)
+  const calculatedSchedule: Installment[] = React.useMemo(() => {
+    if (!paymentType) return [];
+
+    const scheduleArray: Installment[] = [];
+    const todayStr = new Date().toISOString().split("T")[0];
+    const today = new Date();
+
+    if (paymentType === "full") {
+      scheduleArray.push({
+        installmentNumber: 1,
+        amount: fullTotalPayable,
+        dueDate: todayStr,
+        status: "Pending",
+        type: "Full Payment (with discount)"
+      });
+    } else if (paymentType === "partial") {
+      let counter = 1;
+      if (partialInitial > 0) {
+        scheduleArray.push({
+          installmentNumber: counter++,
+          amount: partialInitial,
+          dueDate: todayStr,
+          status: "Pending",
+          type: "Installment 1"
+        });
+      }
+      for (let i = 1; i <= partialTenure; i++) {
+        const nextMonth = new Date();
+        nextMonth.setMonth(today.getMonth() + i);
+        let amount = 0;
+        if (i === partialTenure) {
+          const totalSoFar = partialInitial + (partialEMIAmount * (partialTenure - 1)) + partialRemainder;
+          amount = partialDiscountedTotal - totalSoFar;
+        } else {
+          amount = partialEMIAmount + (i <= partialRemainder ? 1 : 0);
+        }
+        scheduleArray.push({
+          installmentNumber: counter++,
+          amount,
+          dueDate: nextMonth.toISOString().split("T")[0],
+          status: "Pending",
+          type: `Installment ${counter - 1}`
+        });
+      }
+    } else if (paymentType === "emi") {
+      let counter = 1;
+      if (emiDownPayment > 0) {
+        scheduleArray.push({
+          installmentNumber: counter++,
+          amount: emiDownPayment,
+          dueDate: todayStr,
+          status: "Pending",
+          type: "Installment 1"
+        });
+      }
+      let remaining = emiDiscountedTotal - emiDownPayment;
+      for (let i = 1; i <= emiTenure; i++) {
+        const nextMonth = new Date();
+        nextMonth.setMonth(today.getMonth() + i);
+        const amount = i === emiTenure ? remaining : emiEMIAmount;
+        remaining -= amount;
+        scheduleArray.push({
+          installmentNumber: counter++,
+          amount,
+          dueDate: nextMonth.toISOString().split("T")[0],
+          status: "Pending",
+          type: `Installment ${counter - 1}`
+        });
+      }
+    }
+    return scheduleArray;
+  }, [paymentType, fullTotalPayable, partialInitial, partialTenure, partialEMIAmount, partialRemainder, partialDiscountedTotal, emiDownPayment, emiTenure, emiEMIAmount, emiDiscountedTotal]);
+
+  const activeSchedule = locked ? schedule : calculatedSchedule;
 
   // Confirm plan & save schedule
   const handleConfirmPlan = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -240,66 +320,7 @@ export default function PaymentView({
     setLoading(true);
     setLocked(true);
     setConfirmed(true);
-
-    // Generate schedule array
-    const scheduleArray: Installment[] = [];
-    const today = new Date().toISOString().split("T")[0];
-
-    if (paymentType === "full") {
-      scheduleArray.push({
-        installmentNumber: 1,
-        amount: fullTotalPayable,
-        dueDate: today,
-        status: "Pending",
-        type: "Full Payment"
-      });
-    } else if (paymentType === "partial") {
-      let counter = 1;
-      if (partialInitial > 0) {
-        scheduleArray.push({
-          installmentNumber: counter++,
-          amount: partialInitial,
-          dueDate: today,
-          status: "Pending",
-          type: "Initial Payment"
-        });
-      }
-      for (let i = 1; i <= partialTenure; i++) {
-        const nextMonth = new Date();
-        nextMonth.setMonth(nextMonth.getMonth() + i);
-        scheduleArray.push({
-          installmentNumber: counter++,
-          amount: partialEMIAmount,
-          dueDate: nextMonth.toISOString().split("T")[0],
-          status: "Pending",
-          type: `Installment ${counter - 1}`
-        });
-      }
-    } else if (paymentType === "emi") {
-      let counter = 1;
-      if (emiDownPayment > 0) {
-        scheduleArray.push({
-          installmentNumber: counter++,
-          amount: emiDownPayment,
-          dueDate: today,
-          status: "Pending",
-          type: "Down Payment"
-        });
-      }
-      for (let i = 1; i <= emiTenure; i++) {
-        const nextMonth = new Date();
-        nextMonth.setMonth(nextMonth.getMonth() + i);
-        scheduleArray.push({
-          installmentNumber: counter++,
-          amount: emiEMIAmount,
-          dueDate: nextMonth.toISOString().split("T")[0],
-          status: "Pending",
-          type: `Installment ${counter - 1}`
-        });
-      }
-    }
-
-    setSchedule(scheduleArray);
+    setSchedule(calculatedSchedule);
 
     // Write to Firestore collections (feeStructures, installmentSchedules)
     const activePayFees = paymentType === "full" ? fullTotalPayable : paymentType === "partial" ? partialTotalPayable : emiTotalPayable;
@@ -325,7 +346,7 @@ export default function PaymentView({
         courseName,
         paymentType,
         totalFee: activePayFees,
-        installments: scheduleArray,
+        installments: calculatedSchedule,
         loggedInUser: userProfile?.username || "Admin"
       };
       await saveInstallmentSchedule(scheduleDoc);
@@ -348,6 +369,11 @@ export default function PaymentView({
     );
 
     if (!confirmedPay) return;
+
+    if (!enrollmentId || !enrollmentId.trim()) {
+      setErrorMsg("Enrollment ID is missing. Please search for a valid student enrollment first.");
+      return;
+    }
 
     setProcessingPayment(inst.installmentNumber);
     setErrorMsg("");
@@ -378,20 +404,79 @@ export default function PaymentView({
     }
   };
 
-  // Generate local printable receipt mockup
-  const handlePrintReceipt = (inst: Installment) => {
-    const data = {
-      receiptNumber: `IR${Math.floor(1000 + Math.random() * 9000)}`,
-      date: new Date().toLocaleDateString("en-GB"),
-      studentName,
-      courseName: courseName.replace(/_/g, " ").toUpperCase(),
-      installmentNumber: inst.installmentNumber,
-      amountPaid: inst.amount,
-      paymentMode: paymentMethod,
-      receivedBy: userProfile?.username || "Authorized Officer",
-      branch: branch.toUpperCase()
-    };
-    setPrintReceiptData(data);
+  // Generate PDF receipt using Certificate Builder template
+  const handlePrintReceipt = async (inst: Installment) => {
+    setLoading(true);
+    try {
+      const docSnap = await getDoc(doc(db, "receipt_templates", "fee_receipt"));
+      if (docSnap.exists()) {
+        const templateData = docSnap.data();
+        
+        // Calculate cumulative paid amount
+        const paidSoFar = schedule
+          .filter(s => s.status === "Paid" && s.installmentNumber <= inst.installmentNumber)
+          .reduce((acc, s) => acc + s.amount, 0);
+          
+        const balanceAmt = Math.max(0, totalFees - paidSoFar);
+
+        // Map variables to layout values
+        const dataPayload = {
+          receiptNo: receiptNo || `IR-${enrollmentId}-${inst.installmentNumber}`,
+          date: new Date().toLocaleDateString("en-GB"),
+          studentName: studentName,
+          courseName: courseName.replace(/_/g, " ").toUpperCase(),
+          totalAmount: totalFees.toLocaleString(),
+          paidAmount: inst.amount.toLocaleString(),
+          balanceAmount: balanceAmt.toLocaleString(),
+          receivedBy: userProfile?.username || "Authorized Officer",
+          // Checkbox conditions (passed as strings that resolve to true/false in backend)
+          isAdmissionFee: inst.installmentNumber === 1 ? 'true' : 'false',
+          isCourseFee: inst.installmentNumber > 1 ? 'true' : 'false',
+          isExamFee: 'false',
+          isCash: paymentMethod === 'Cash' ? 'true' : 'false',
+          isOnline: (paymentMethod === 'UPI' || paymentMethod === 'Bank') ? 'true' : 'false',
+          isCheque: paymentMethod === 'Cheque' ? 'true' : 'false'
+        };
+
+        const response = await fetch('/api/certificates', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'preview',
+            templateBase64: templateData.templateBase64,
+            isPdfTemplate: templateData.isPdfTemplate,
+            fields: templateData.fields,
+            dimensions: templateData.dimensions,
+            data: dataPayload
+          }),
+        });
+
+        if (!response.ok) throw new Error("Failed to generate receipt PDF");
+
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+      } else {
+        // Fallback to local receipt modal if template doesn't exist
+        const data = {
+          receiptNumber: `IR${Math.floor(1000 + Math.random() * 9000)}`,
+          date: new Date().toLocaleDateString("en-GB"),
+          studentName,
+          courseName: courseName.replace(/_/g, " ").toUpperCase(),
+          installmentNumber: inst.installmentNumber,
+          amountPaid: inst.amount,
+          paymentMode: paymentMethod,
+          receivedBy: userProfile?.username || "Authorized Officer",
+          branch: branch.toUpperCase()
+        };
+        setPrintReceiptData(data);
+      }
+    } catch (e: any) {
+      console.error(e);
+      alert("Error generating PDF receipt: " + e.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -734,9 +819,16 @@ export default function PaymentView({
       )}
 
       {/* Installment Table Section */}
-      {confirmed && schedule.length > 0 && (
+      {paymentType && activeSchedule.length > 0 && (
         <div className="mt-8 space-y-4">
-          <h3 className="text-xs font-bold text-slate-450 uppercase tracking-widest border-l-2 border-teal-500 pl-2">Installment Schedule</h3>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <h3 className="text-xs font-bold text-slate-450 uppercase tracking-widest border-l-2 border-teal-500 pl-2">Installment Schedule</h3>
+            {!confirmed && (
+              <span className="px-3 py-1 bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-semibold rounded-xl flex items-center gap-1.5 w-fit">
+                <Info className="h-3.5 w-3.5" /> Preview Mode (Confirm plan below to enable payment processing)
+              </span>
+            )}
+          </div>
           
           <div className="overflow-x-auto bg-slate-950/20 border border-slate-900 rounded-2xl">
             <table className="w-full text-xs text-left">
@@ -751,9 +843,11 @@ export default function PaymentView({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-900/60">
-                {schedule.map((inst) => (
+                {activeSchedule.map((inst) => (
                   <tr key={inst.installmentNumber} className="hover:bg-slate-900/20 text-slate-300">
-                    <td className="px-5 py-3 text-center font-medium">Installment {inst.installmentNumber}</td>
+                    <td className="px-5 py-3 text-center font-medium">
+                      {inst.type ? `${inst.type} (Installment ${inst.installmentNumber})` : `Installment ${inst.installmentNumber}`}
+                    </td>
                     <td className="px-5 py-3 text-center text-slate-400">{inst.dueDate}</td>
                     <td className="px-5 py-3 text-center font-bold">₹{inst.amount.toLocaleString()}</td>
                     <td className="px-5 py-3 text-center">
@@ -769,9 +863,9 @@ export default function PaymentView({
                       <input
                         type="checkbox"
                         checked={inst.status === "Paid"}
-                        disabled={inst.status === "Paid" || processingPayment === inst.installmentNumber}
+                        disabled={!confirmed || inst.status === "Paid" || processingPayment === inst.installmentNumber}
                         onChange={() => handleMarkAsPaid(inst)}
-                        className="h-4.5 w-4.5 text-teal-500 border-slate-800 bg-slate-950 rounded focus:ring-teal-500/30 cursor-pointer"
+                        className="h-4.5 w-4.5 text-teal-500 border-slate-800 bg-slate-950 rounded focus:ring-teal-500/30 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                       />
                     </td>
                     <td className="px-5 py-3 text-center">
