@@ -71,21 +71,17 @@ export function openInstallmentReceipt(params: {
   totalFees?: number;
   totalPaidSoFar?: number;
   balanceDue?: number;
+  isAdmission?: boolean;
 }) {
   const logoBase64 = "/TrustCareLogo.avif";
   const courseLabel = params.courseName.replace(/_/g, " ").toUpperCase();
-  const amountFormatted = new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 0,
-  }).format(params.amountPaid);
 
   const receiptHTML = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=794">
-  <title>Installment Receipt - ${params.receiptNo}</title>
+  <title>${params.isAdmission ? "Admission" : "Installment"} Receipt - ${params.receiptNo}</title>
   <style>
     @page { size: A4; margin: 0.5in; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -128,7 +124,7 @@ export function openInstallmentReceipt(params: {
       min-height: 1123px;
       margin: 0 auto 18px;
       background: #fff;
-      padding: 10mm;
+      padding: 20px;
       box-shadow: 0 4px 20px rgba(0,0,0,0.3);
       position: relative;
       display: flex;
@@ -138,10 +134,10 @@ export function openInstallmentReceipt(params: {
     }
     .receipt {
       width: 100%;
-      height: 45%;
+      height: 48%;
       border: 3px solid #000;
-      border-radius: 15px;
-      padding: 15px;
+      border-radius: 20px;
+      padding: 20px;
       box-sizing: border-box;
       background: white;
       page-break-inside: avoid;
@@ -149,20 +145,21 @@ export function openInstallmentReceipt(params: {
       z-index: 1;
       display: flex;
       flex-direction: column;
+      justify-content: space-between;
       overflow: hidden;
     }
     .receipt::before {
       content: "";
       position: absolute;
-      top: 55%; left: 50%;
+      top: 50%; left: 50%;
       transform: translate(-50%, -50%);
-      width: 80%;
-      height: 80%;
+      width: 420px;
+      height: 420px;
       background-image: url('${logoBase64}');
       background-repeat: no-repeat;
       background-position: center;
       background-size: contain;
-      opacity: 0.07;
+      opacity: 0.05;
       z-index: 0;
       pointer-events: none;
     }
@@ -170,7 +167,7 @@ export function openInstallmentReceipt(params: {
       width: 100%;
       border: none;
       border-top: 2px dashed #aaa;
-      margin: 0;
+      margin: 12px 0;
       position: relative;
       z-index: 1;
     }
@@ -178,50 +175,61 @@ export function openInstallmentReceipt(params: {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 6px 10px;
-      margin-bottom: 10px;
-      flex-shrink: 0;
-      background: #fff;
+      margin-bottom: 12px;
       position: relative;
       z-index: 1;
     }
-    .header-logo img {
-      width: 110px;
-      height: auto;
+    .logo-container {
+      width: 150px;
+      height: 150px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .logo-img {
+      width: 150px;
+      height: 150px;
       object-fit: contain;
     }
     .header-center {
       flex: 1;
       text-align: center;
-      line-height: 1.1;
-      padding: 0 8px;
+      line-height: 1.2;
     }
-    .header-center .org-name {
-      font-size: 28px;
+    .org-name {
+      font-size: 36px;
       font-weight: 900;
       color: #000;
-      letter-spacing: 2px;
-      text-transform: uppercase;
       font-family: Arial Black, Arial, sans-serif;
-    }
-    .header-center .org-sub {
-      font-size: 15px;
-      font-weight: 800;
-      color: #000;
       letter-spacing: 1.5px;
-      text-transform: uppercase;
+      margin: 0;
     }
-    .header-center .receipt-badge {
+    .org-sub {
+      font-size: 16px;
+      font-weight: bold;
+      color: #000;
+      letter-spacing: 0.5px;
+      margin: 2px 0 0 0;
+    }
+    .receipt-badge {
       display: inline-block;
       background: #000;
       color: #fff;
       font-size: 11px;
-      font-weight: 900;
+      font-weight: bold;
       letter-spacing: 2px;
-      padding: 2px 16px;
-      border-radius: 20px;
-      margin-top: 4px;
+      padding: 3px 20px;
+      border-radius: 12px;
+      margin-top: 6px;
       text-transform: uppercase;
+    }
+    .receipt-type {
+      font-size: 10px;
+      font-weight: bold;
+      color: #777;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-top: 2px;
     }
     .receipt-content {
       display: flex;
@@ -229,85 +237,78 @@ export function openInstallmentReceipt(params: {
       flex: 1;
       position: relative;
       z-index: 1;
-    }
-    .receipt-info {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 10px;
-      flex-shrink: 0;
-    }
-    .receipt-no, .date {
-      font-size: 13px;
-      font-weight: bold;
-    }
-    .receipt-copy {
-      font-size: 11px;
-      font-weight: bold;
-      color: #bbb;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      text-align: center;
-    }
-    .form-fields {
-      display: flex;
-      flex-direction: column;
-      gap: 7px;
-      flex: 1;
+      margin-top: 10px;
     }
     .field-row {
       display: flex;
-      align-items: center;
-      font-size: 13px;
+      align-items: flex-end;
+      margin-top: 16px;
+      font-size: 14px;
       font-weight: bold;
+      color: #000;
+      position: relative;
+      z-index: 1;
     }
     .field-label {
-      min-width: 130px;
+      white-space: nowrap;
+      margin-right: 5px;
+    }
+    .field-underline {
+      flex: 1;
+      border-bottom: 1.5px solid #000;
+      padding-bottom: 1px;
+      padding-left: 8px;
+      font-weight: bold;
       color: #000;
     }
-    .field-value {
-      flex-grow: 1;
-      border-bottom: 1px solid #000;
-      padding: 2px 5px;
-      min-height: 18px;
-      color: #0066cc;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      max-width: calc(100% - 130px);
+    .checkbox-box {
+      width: 22px;
+      height: 22px;
+      border: 2px solid #000;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      font-weight: bold;
+      color: #000;
+      margin-left: 6px;
+      vertical-align: middle;
+      line-height: 1;
+      background: #fff;
+    }
+    .mode-badge {
+      background: #000;
+      color: #fff;
+      padding: 4px 10px;
+      border-radius: 5px;
+      font-size: 12.5px;
+      font-weight: bold;
+      margin-right: 15px;
+      text-transform: uppercase;
+      display: inline-block;
     }
     .footer {
-      margin-top: 8px;
       display: flex;
       justify-content: space-between;
       align-items: flex-end;
-      flex-shrink: 0;
+      margin-top: 20px;
       position: relative;
       z-index: 1;
     }
     .footer-notes {
       font-size: 11px;
-      font-weight: 700;
-      max-width: 60%;
-      line-height: 1.6;
+      font-weight: bold;
+      line-height: 1.5;
+      color: #000;
+      text-align: left;
     }
-    .footer-notes p::before {
-      content: "\u25CF  ";
-    }
-    .authority-stamp {
+    .signature-area {
       font-size: 12px;
-      font-weight: 800;
+      font-weight: bold;
+      color: #000;
       white-space: nowrap;
-      padding-bottom: 2px;
     }
-    .balance-row .field-label {
-      color: #cc0000;
-    }
-    .balance-value {
-      color: #cc0000 !important;
-      font-weight: 900;
-    }
-      @media print {
+    @media print {
       html, body { overflow: visible; height: auto; background: #fff; }
       .print-bar { display: none !important; }
       .scroll-area { height: auto; overflow: visible; padding: 0; }
@@ -316,7 +317,7 @@ export function openInstallmentReceipt(params: {
         height: 100vh;
         min-height: 100vh;
         margin: 0;
-        padding: 0.5in;
+        padding: 20px;
         box-shadow: none;
         page-break-after: always;
       }
@@ -335,58 +336,96 @@ export function openInstallmentReceipt(params: {
       <!-- Receipt 1 - Student Copy -->
       <div class="receipt">
         <div class="header">
-          <div class="header-logo"><img src="${logoBase64}" alt="Logo" /></div>
+          <div class="logo-container"><img class="logo-img" src="${logoBase64}" alt="Logo" /></div>
           <div class="header-center">
             <div class="org-name">TRUSTCARE</div>
             <div class="org-sub">INSTITUTE OF HEALTH SCIENCE</div>
-            <div class="receipt-badge">RECEIPT</div>
+            <div class="receipt-badge">${params.isAdmission ? 'ADMISSION RECEIPT' : 'RECEIPT'}</div>
+            <div class="receipt-type">STUDENT COPY</div>
           </div>
-          <div class="header-logo"><img src="${logoBase64}" alt="Logo" /></div>
+          <div class="logo-container"><img class="logo-img" src="${logoBase64}" alt="Logo" /></div>
         </div>
         <div class="receipt-content">
-          <div class="receipt-info">
-            <div class="receipt-no">Receipt No: ${params.receiptNo}</div>
-            <div class="receipt-copy">STUDENT COPY</div>
-            <div class="date">Date: ${params.date}</div>
+          <div class="field-row">
+            <div style="display: flex; flex: 1; align-items: flex-end;">
+              <span class="field-label">Receipt No.</span>
+              <span class="field-underline">${params.receiptNo}</span>
+            </div>
+            <div style="display: flex; width: 220px; align-items: flex-end; margin-left: 20px;">
+              <span class="field-label">Date :</span>
+              <span class="field-underline">${params.date}</span>
+            </div>
           </div>
-          <div class="form-fields">
-            <div class="field-row">
-              <div class="field-label">Student Name:</div>
-              <div class="field-value">${params.studentName}</div>
-            </div>
-            <div class="field-row">
-              <div class="field-label">Course Name:</div>
-              <div class="field-value">${courseLabel}</div>
-            </div>
-            <div class="field-row">
-              <div class="field-label">Installment No:</div>
-              <div class="field-value">${params.installmentNumber}</div>
-            </div>
-            <div class="field-row">
-              <div class="field-label">Amount Paid:</div>
-              <div class="field-value">${amountFormatted}</div>
-            </div>
-            <div class="field-row">
-              <div class="field-label">Payment Mode:</div>
-              <div class="field-value">${params.paymentMode}</div>
-            </div>
-            ${params.totalPaidSoFar !== undefined ? `
-            <div class="field-row">
-              <div class="field-label">Total Paid So Far:</div>
-              <div class="field-value">${new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(params.totalPaidSoFar)}</div>
-            </div>` : ''}
-            ${params.balanceDue !== undefined ? `
-            <div class="field-row balance-row">
-              <div class="field-label">Balance Due:</div>
-              <div class="field-value balance-value">${new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(params.balanceDue)}</div>
-            </div>` : ''}
+
+          <div class="field-row">
+            <span class="field-label">Student Name :</span>
+            <span class="field-underline">${params.studentName}</span>
           </div>
-          <div class="footer">
-            <div class="footer-notes">
-              <p>Course Fees, Once Paid Cannot Be Refunded.</p>
-              <p>After Admission Is Completed Cancellation. Is Not Allowed.</p>
+
+          <div class="field-row">
+            <span class="field-label">Course Name :</span>
+            <span class="field-underline">${courseLabel}</span>
+          </div>
+
+          <div class="field-row" style="align-items: center;">
+            <span class="field-label">Purpose To Pay :</span>
+            <span style="display: inline-flex; align-items: center; margin-right: 15px;">
+              Admission Fee's
+              <span class="checkbox-box">${(params.isAdmission || params.installmentNumber === 1) ? '✓' : '&nbsp;'}</span>
+            </span>
+            <span style="display: inline-flex; align-items: center; margin-right: 15px;">
+              Course Fee's
+              <span class="checkbox-box">${(!params.isAdmission && params.installmentNumber > 1) ? '✓' : '&nbsp;'}</span>
+            </span>
+            <span style="display: inline-flex; align-items: center;">
+              Exam Fee's
+              <span class="checkbox-box">&nbsp;</span>
+            </span>
+          </div>
+
+          <div class="field-row">
+            <div style="display: flex; flex: 1; align-items: flex-end;">
+              <span class="field-label">Total Amount :</span>
+              <span class="field-underline">₹${(params.totalFees || 0).toLocaleString()}</span>
             </div>
-            <div class="authority-stamp">Authority Sign./Stamp &nbsp;................................</div>
+            <div style="display: flex; flex: 1; align-items: flex-end; margin-left: 15px;">
+              <span class="field-label">Paid Amt. :</span>
+              <span class="field-underline">₹${(params.amountPaid || 0).toLocaleString()}</span>
+            </div>
+            <div style="display: flex; flex: 1; align-items: flex-end; margin-left: 15px;">
+              <span class="field-label">Balance Amt :</span>
+              <span class="field-underline">₹${(params.balanceDue || 0).toLocaleString()}</span>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <span class="field-label">Received By :</span>
+            <span class="field-underline">${params.receivedBy}</span>
+          </div>
+
+          <div class="field-row" style="align-items: center; margin-top: 18px;">
+            <span class="mode-badge">Mode of Payment:</span>
+            <span style="display: inline-flex; align-items: center; margin-right: 15px;">
+              Cash
+              <span class="checkbox-box">${params.paymentMode.toLowerCase() === 'cash' ? '✓' : '&nbsp;'}</span>
+            </span>
+            <span style="display: inline-flex; align-items: center; margin-right: 15px;">
+              Online
+              <span class="checkbox-box">${(params.paymentMode.toLowerCase() === 'online' || params.paymentMode.toLowerCase() === 'upi' || params.paymentMode.toLowerCase() === 'bank' || params.paymentMode.toLowerCase() === 'gpay' || params.paymentMode.toLowerCase() === 'phonepe') ? '✓' : '&nbsp;'}</span>
+            </span>
+            <span style="display: inline-flex; align-items: center;">
+              Cheque
+              <span class="checkbox-box">${params.paymentMode.toLowerCase() === 'cheque' ? '✓' : '&nbsp;'}</span>
+            </span>
+          </div>
+        </div>
+        <div class="footer">
+          <div class="footer-notes">
+            <div>• Course Fees, Once Paid Cannot Be Refunded.</div>
+            <div style="margin-top: 3px;">• After Admission Is Completed Cancellation. Is Not Allowed.</div>
+          </div>
+          <div class="signature-area">
+            Authority Sign./Stamp &nbsp;................................
           </div>
         </div>
       </div>
@@ -396,58 +435,96 @@ export function openInstallmentReceipt(params: {
       <!-- Receipt 2 - Office Copy -->
       <div class="receipt">
         <div class="header">
-          <div class="header-logo"><img src="${logoBase64}" alt="Logo" /></div>
+          <div class="logo-container"><img class="logo-img" src="${logoBase64}" alt="Logo" /></div>
           <div class="header-center">
             <div class="org-name">TRUSTCARE</div>
             <div class="org-sub">INSTITUTE OF HEALTH SCIENCE</div>
-            <div class="receipt-badge">RECEIPT</div>
+            <div class="receipt-badge">${params.isAdmission ? 'ADMISSION RECEIPT' : 'RECEIPT'}</div>
+            <div class="receipt-type">CENTRE COPY</div>
           </div>
-          <div class="header-logo"><img src="${logoBase64}" alt="Logo" /></div>
+          <div class="logo-container"><img class="logo-img" src="${logoBase64}" alt="Logo" /></div>
         </div>
         <div class="receipt-content">
-          <div class="receipt-info">
-            <div class="receipt-no">Receipt No: ${params.receiptNo}</div>
-            <div class="receipt-copy">OFFICE COPY</div>
-            <div class="date">Date: ${params.date}</div>
+          <div class="field-row">
+            <div style="display: flex; flex: 1; align-items: flex-end;">
+              <span class="field-label">Receipt No.</span>
+              <span class="field-underline">${params.receiptNo}</span>
+            </div>
+            <div style="display: flex; width: 220px; align-items: flex-end; margin-left: 20px;">
+              <span class="field-label">Date :</span>
+              <span class="field-underline">${params.date}</span>
+            </div>
           </div>
-          <div class="form-fields">
-            <div class="field-row">
-              <div class="field-label">Student Name:</div>
-              <div class="field-value">${params.studentName}</div>
-            </div>
-            <div class="field-row">
-              <div class="field-label">Course Name:</div>
-              <div class="field-value">${courseLabel}</div>
-            </div>
-            <div class="field-row">
-              <div class="field-label">Installment No:</div>
-              <div class="field-value">${params.installmentNumber}</div>
-            </div>
-            <div class="field-row">
-              <div class="field-label">Amount Paid:</div>
-              <div class="field-value">${amountFormatted}</div>
-            </div>
-            <div class="field-row">
-              <div class="field-label">Payment Mode:</div>
-              <div class="field-value">${params.paymentMode}</div>
-            </div>
-            ${params.totalPaidSoFar !== undefined ? `
-            <div class="field-row">
-              <div class="field-label">Total Paid So Far:</div>
-              <div class="field-value">${new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(params.totalPaidSoFar)}</div>
-            </div>` : ''}
-            ${params.balanceDue !== undefined ? `
-            <div class="field-row balance-row">
-              <div class="field-label">Balance Due:</div>
-              <div class="field-value balance-value">${new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(params.balanceDue)}</div>
-            </div>` : ''}
+
+          <div class="field-row">
+            <span class="field-label">Student Name :</span>
+            <span class="field-underline">${params.studentName}</span>
           </div>
-          <div class="footer">
-            <div class="footer-notes">
-              <p>Course Fees, Once Paid Cannot Be Refunded.</p>
-              <p>After Admission Is Completed Cancellation. Is Not Allowed.</p>
+
+          <div class="field-row">
+            <span class="field-label">Course Name :</span>
+            <span class="field-underline">${courseLabel}</span>
+          </div>
+
+          <div class="field-row" style="align-items: center;">
+            <span class="field-label">Purpose To Pay :</span>
+            <span style="display: inline-flex; align-items: center; margin-right: 15px;">
+              Admission Fee's
+              <span class="checkbox-box">${(params.isAdmission || params.installmentNumber === 1) ? '✓' : '&nbsp;'}</span>
+            </span>
+            <span style="display: inline-flex; align-items: center; margin-right: 15px;">
+              Course Fee's
+              <span class="checkbox-box">${(!params.isAdmission && params.installmentNumber > 1) ? '✓' : '&nbsp;'}</span>
+            </span>
+            <span style="display: inline-flex; align-items: center;">
+              Exam Fee's
+              <span class="checkbox-box">&nbsp;</span>
+            </span>
+          </div>
+
+          <div class="field-row">
+            <div style="display: flex; flex: 1; align-items: flex-end;">
+              <span class="field-label">Total Amount :</span>
+              <span class="field-underline">₹${(params.totalFees || 0).toLocaleString()}</span>
             </div>
-            <div class="authority-stamp">Authority Sign./Stamp &nbsp;................................</div>
+            <div style="display: flex; flex: 1; align-items: flex-end; margin-left: 15px;">
+              <span class="field-label">Paid Amt. :</span>
+              <span class="field-underline">₹${(params.amountPaid || 0).toLocaleString()}</span>
+            </div>
+            <div style="display: flex; flex: 1; align-items: flex-end; margin-left: 15px;">
+              <span class="field-label">Balance Amt :</span>
+              <span class="field-underline">₹${(params.balanceDue || 0).toLocaleString()}</span>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <span class="field-label">Received By :</span>
+            <span class="field-underline">${params.receivedBy}</span>
+          </div>
+
+          <div class="field-row" style="align-items: center; margin-top: 18px;">
+            <span class="mode-badge">Mode of Payment:</span>
+            <span style="display: inline-flex; align-items: center; margin-right: 15px;">
+              Cash
+              <span class="checkbox-box">${params.paymentMode.toLowerCase() === 'cash' ? '✓' : '&nbsp;'}</span>
+            </span>
+            <span style="display: inline-flex; align-items: center; margin-right: 15px;">
+              Online
+              <span class="checkbox-box">${(params.paymentMode.toLowerCase() === 'online' || params.paymentMode.toLowerCase() === 'upi' || params.paymentMode.toLowerCase() === 'bank' || params.paymentMode.toLowerCase() === 'gpay' || params.paymentMode.toLowerCase() === 'phonepe') ? '✓' : '&nbsp;'}</span>
+            </span>
+            <span style="display: inline-flex; align-items: center;">
+              Cheque
+              <span class="checkbox-box">${params.paymentMode.toLowerCase() === 'cheque' ? '✓' : '&nbsp;'}</span>
+            </span>
+          </div>
+        </div>
+        <div class="footer">
+          <div class="footer-notes">
+            <div>• Course Fees, Once Paid Cannot Be Refunded.</div>
+            <div style="margin-top: 3px;">• After Admission Is Completed Cancellation. Is Not Allowed.</div>
+          </div>
+          <div class="signature-area">
+            Authority Sign./Stamp &nbsp;................................
           </div>
         </div>
       </div>
@@ -653,7 +730,7 @@ export function openCoursePaymentReceipt(data: ReceiptData) {
       background-image: url('${logoBase64}');
       background-repeat: no-repeat;
       background-position: center 48%;
-      background-size: 550px;
+      background-size: 825px;
       opacity: 0.08;
       z-index: 0;
       pointer-events: none;
@@ -715,7 +792,7 @@ export function openCoursePaymentReceipt(data: ReceiptData) {
 
     <!-- Header -->
     <div style="display:flex;align-items:center;gap:14px;padding-bottom:12px;margin-bottom:6px;position:relative;z-index:2;">
-      <img src="${logoBase64}" alt="Logo" style="width:84px;height:84px;border-radius:50%;border:2px solid #14507a;object-fit:cover;flex-shrink:0;" />
+      <img src="${logoBase64}" alt="Logo" style="width:126px;height:126px;object-fit:cover;flex-shrink:0;" />
       <div style="flex-grow:1;">
         <div style="color:#0b5175;font-size:23px;font-weight:900;letter-spacing:0.3px;line-height:1.2;font-family:'Arial Black', Impact, Arial, sans-serif;">TRUSTCARE INSTITUTE OF HEALTH SCIENCE</div>
         <div style="font-weight:700;font-size:11.5px;color:#000;margin-top:5px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
@@ -769,9 +846,9 @@ export function openCoursePaymentReceipt(data: ReceiptData) {
         <span class="field-line">&nbsp;${formattedAdmissionFee}</span>
       </div>
 
-      <!-- Total Course Fees -->
+      <!-- Course Fees -->
       <div class="field-row">
-        <span style="white-space:nowrap;">Total Course Fees</span>
+        <span style="white-space:nowrap;">Course Fees</span>
         <span class="field-line" style="max-width:120px;">&nbsp;${formattedPerYearFee}</span>
         <span style="white-space:nowrap;">&times;</span>
         <span class="field-line" style="max-width:100px;text-align:center;">&nbsp;${years} Year${years > 1 ? "s" : ""}</span>
@@ -835,7 +912,7 @@ export function openCoursePaymentReceipt(data: ReceiptData) {
 
     <!-- Header -->
     <div style="display:flex;align-items:center;gap:14px;padding-bottom:12px;margin-bottom:6px;position:relative;z-index:2;">
-      <img src="${logoBase64}" alt="Logo" style="width:84px;height:84px;border-radius:50%;border:2px solid #14507a;object-fit:cover;flex-shrink:0;" />
+      <img src="${logoBase64}" alt="Logo" style="width:126px;height:126px;object-fit:cover;flex-shrink:0;" />
       <div style="flex-grow:1;">
         <div style="color:#0b5175;font-size:23px;font-weight:900;letter-spacing:0.3px;line-height:1.2;font-family:'Arial Black', Impact, Arial, sans-serif;">TRUSTCARE INSTITUTE OF HEALTH SCIENCE</div>
         <div style="font-weight:700;font-size:11.5px;color:#000;margin-top:5px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;">

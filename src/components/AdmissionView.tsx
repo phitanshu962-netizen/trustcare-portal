@@ -20,6 +20,7 @@ import {
   Database,
   Info
 } from "lucide-react";
+import { openInstallmentReceipt } from "./CoursePaymentReceiptView";
 
 interface AdmissionViewProps {
   userProfile: UserProfile | null;
@@ -313,6 +314,23 @@ export default function AdmissionView({
     setSubmitting(false);
 
     if (res.success) {
+      // Generate and open the Admission Receipt using the installment receipt format
+      openInstallmentReceipt({
+        receiptNo: receiptNumber,
+        date: new Date(admissionDoc.date).toLocaleDateString("en-GB"),
+        studentName: studentName,
+        courseName: course,
+        installmentNumber: 1,
+        amountPaid: config.admission_fee,
+        paymentMode: paymentMode,
+        receivedBy: userProfile?.username || "Admin",
+        branch: branch.toUpperCase(),
+        totalFees: config.admission_fee,
+        totalPaidSoFar: config.admission_fee,
+        balanceDue: 0,
+        isAdmission: true
+      });
+
       onAdmissionComplete(
         enrollmentId,
         studentName,
@@ -554,7 +572,7 @@ export default function AdmissionView({
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold text-slate-400">Total Course Fees</label>
+                  <label className="block text-xs font-semibold text-slate-400">Course Fees</label>
                   <input
                     type="text"
                     value={`₹${config.fees.toLocaleString()}`}

@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from "react";
 import { UserProfile } from "../lib/services/authService";
-import { 
-  getStudentDataByEnrollmentId, 
-  saveExamReceipt, 
+import {
+  getStudentDataByEnrollmentId,
+  saveExamReceipt,
   getNextReceiptNumberEF,
   ExamReceiptData
 } from "../lib/services/paymentService";
-import { 
-  Receipt, 
-  Loader2, 
-  Search, 
-  CheckCircle2, 
-  AlertTriangle, 
-  Info, 
+import {
+  Receipt,
+  Loader2,
+  Search,
+  CheckCircle2,
+  AlertTriangle,
+  Info,
   Printer,
   X
 } from "lucide-react";
@@ -24,7 +24,7 @@ interface ExamReceiptViewProps {
 
 const getExamFee = (branch: string, courseName: string) => {
   const branchLower = (branch || "kurla").toLowerCase();
-  
+
   if (branchLower === "karad") {
     const course = String(courseName).toLowerCase();
     if (course.includes("parlour")) {
@@ -32,7 +32,7 @@ const getExamFee = (branch: string, courseName: string) => {
     }
     return 6000;
   }
-  
+
   return 500; // Default for Kurla, Thane, Nalasapora
 };
 
@@ -41,7 +41,7 @@ export default function ExamReceiptView({ userProfile, onGoBack }: ExamReceiptVi
   const [submitting, setSubmitting] = useState(false);
   const [receiptNumber, setReceiptNumber] = useState("");
   const [receiptDate, setReceiptDate] = useState("");
-  
+
   // Form fields
   const [enrollmentId, setEnrollmentId] = useState("");
   const [studentName, setStudentName] = useState("");
@@ -50,7 +50,7 @@ export default function ExamReceiptView({ userProfile, onGoBack }: ExamReceiptVi
   const [totalAmount, setTotalAmount] = useState(500);
   const [paymentMode, setPaymentMode] = useState("");
   const [agreeTerms, setAgreeTerms] = useState(false);
-  
+
   const [notification, setNotification] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
 
   const showNotification = (message: string, type: "success" | "error" | "info" = "info") => {
@@ -67,7 +67,7 @@ export default function ExamReceiptView({ userProfile, onGoBack }: ExamReceiptVi
       try {
         const nextReceipt = await getNextReceiptNumberEF();
         setReceiptNumber(nextReceipt);
-        
+
         const today = new Date();
         const yyyy = today.getFullYear();
         const mm = String(today.getMonth() + 1).padStart(2, '0');
@@ -94,13 +94,13 @@ export default function ExamReceiptView({ userProfile, onGoBack }: ExamReceiptVi
       if (res.success) {
         setStudentName(res.studentName || "");
         setCourseName(res.courseName || "");
-        
+
         const studentBranch = res.branch || userProfile?.branch || "kurla";
         setBranch(studentBranch);
-        
+
         const fee = getExamFee(studentBranch, res.courseName || "");
         setTotalAmount(fee);
-        
+
         showNotification("Student data loaded successfully!", "success");
       } else {
         showNotification("Enrollment ID not found or invalid", "error");
@@ -114,141 +114,479 @@ export default function ExamReceiptView({ userProfile, onGoBack }: ExamReceiptVi
     }
   };
 
-  // Generate HTML for printer double receipt
+  // Generate HTML for printer double receipt (same design as installment receipt)
   const printReceipt = (receiptNo: string, dateStr: string, name: string, course: string, amt: number, mode: string, studentBranch: string) => {
-    const logoBase64 = "https://i.postimg.cc/15z0wxhX/cropped-circle-image-(1).png";
-    const formattedAmount = "₹" + amt.toFixed(2);
-    
-    const receiptHTML = `
-      <!DOCTYPE html>
-      <html lang="en">
-      <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Exam Receipt - ${receiptNo}</title>
-          <style>
-              @page { size: A4; margin: 0.5in; }
-              body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: white; color: black; }
-              .page-container { width: 210mm; display: flex; flex-direction: column; padding: 10mm; box-sizing: border-box; }
-              .receipt { width: 100%; border: 3px solid #000; border-radius: 15px; padding: 15px; box-sizing: border-box; background: white; margin-bottom: 10mm; page-break-inside: avoid; }
-              .header { display: flex; align-items: center; margin-bottom: 15px; border-bottom: 2px solid #000; padding-bottom: 10px; }
-              .logo img { width: 65px; height: auto; }
-              .institute-name { font-size: 28px; font-weight: bold; color: #000; flex-grow: 1; letter-spacing: 1px; text-align: center; }
-              .receipt-label { background: #333; color: white; padding: 5px 15px; border-radius: 20px; font-size: 14px; font-weight: bold; }
-              .receipt-content { display: flex; flex-direction: column; }
-              .receipt-info { display: flex; justify-content: space-between; margin-bottom: 20px; }
-              .receipt-no, .date, .branch { font-size: 16px; font-weight: bold; }
-              .form-fields { flex-grow: 1; display: flex; flex-direction: column; gap: 12px; }
-              .field-row { display: flex; align-items: center; font-size: 14px; font-weight: bold; }
-              .field-label { min-width: 140px; color: #000; }
-              .field-value { flex-grow: 1; border-bottom: 1px solid #000; padding: 2px 5px; min-height: 20px; color: #0066cc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-              .footer { margin-top: 25px; display: flex; justify-content: space-between; align-items: flex-end; }
-              .note { font-size: 14px; font-weight: bold; max-width: 60%; }
-              .signature-area { text-align: center; min-width: 150px; }
-              .signature-line { border-bottom: 1px solid #000; height: 40px; margin-bottom: 5px; }
-              .signature-label { font-size: 14px; font-weight: bold; }
-              @media print { 
-                  .page-container { width: 100%; padding: 0; } 
-                  body { padding: 0; }
-              }
-          </style>
-      </head>
-      <body>
-          <div class="page-container">
-              <!-- First Receipt: Student Copy -->
-              <div class="receipt">
-                  <div class="header">
-                      <div class="logo"><img src="${logoBase64}"></div> 
-                      <div class="institute-name">TRUSTCARE</div>
-                      <div class="receipt-label">STUDENT COPY</div>
-                  </div>
-                  <div class="receipt-content">
-                      <div class="receipt-info">
-                          <div class="receipt-no">Receipt No. ${receiptNo}</div>
-                          <div class="branch">Branch: ${studentBranch.toUpperCase()}</div>
-                          <div class="date">Date: ${dateStr}</div>
-                      </div>
-                      <div class="form-fields">
-                          <div class="field-row">
-                              <div class="field-label">Student Name:</div>
-                              <div class="field-value">${name}</div>
-                          </div>
-                          <div class="field-row">
-                              <div class="field-label">Course Name:</div>
-                              <div class="field-value">${course}</div>
-                          </div>
-                          <div class="field-row">
-                              <div class="field-label">Total Amount:</div>
-                              <div class="field-value">${formattedAmount}</div>
-                          </div>
-                          <div class="field-row">
-                              <div class="field-label">Payment Mode:</div>
-                              <div class="field-value">${mode}</div>
-                          </div>
-                      </div>
-                      <div class="footer">
-                          <div class="note">• Fees once paid are non-refundable</div>
-                          <div class="signature-area">
-                              <div class="signature-line"></div>
-                              <div class="signature-label">Authorized Signature</div>
-                          </div>
-                      </div>
-                  </div>
-              </div>
-              
-              <div style="border: 2px dashed #000; margin: 25px 0;"></div>
-              
-              <!-- Second Receipt: Office Copy -->
-              <div class="receipt">
-                  <div class="header">
-                      <div class="logo"><img src="${logoBase64}"></div> 
-                      <div class="institute-name">TRUSTCARE</div>
-                      <div class="receipt-label">OFFICE COPY</div>
-                  </div>
-                  <div class="receipt-content">
-                      <div class="receipt-info">
-                          <div class="receipt-no">Receipt No. ${receiptNo}</div>
-                          <div class="branch">Branch: ${studentBranch.toUpperCase()}</div>
-                          <div class="date">Date: ${dateStr}</div>
-                      </div>
-                      <div class="form-fields">
-                          <div class="field-row">
-                              <div class="field-label">Student Name:</div>
-                              <div class="field-value">${name}</div>
-                          </div>
-                          <div class="field-row">
-                              <div class="field-label">Course Name:</div>
-                              <div class="field-value">${course}</div>
-                          </div>
-                          <div class="field-row">
-                              <div class="field-label">Total Amount:</div>
-                              <div class="field-value">${formattedAmount}</div>
-                          </div>
-                          <div class="field-row">
-                              <div class="field-label">Payment Mode:</div>
-                              <div class="field-value">${mode}</div>
-                          </div>
-                      </div>
-                      <div class="footer">
-                          <div class="note">• Fees once paid are non-refundable</div>
-                          <div class="signature-area">
-                              <div class="signature-line"></div>
-                              <div class="signature-label">Authorized Signature</div>
-                          </div>
-                      </div>
-                  </div>
-              </div>
-          </div>
-          <script>
-              setTimeout(() => {
-                  window.print();
-              }, 500);
-          </script>
-      </body>
-      </html>
-    `;
+    const logoBase64 = "/TrustCareLogo.avif";
+    const courseLabel = course.replace(/_/g, " ").toUpperCase();
+    const formattedAmount = "₹" + amt.toLocaleString("en-IN");
 
-    const printWindow = window.open("", "_blank", "width=800,height=1000");
+    const receiptHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=794">
+  <title>Exam Receipt - ${receiptNo}</title>
+  <style>
+    @page { size: A4; margin: 0.5in; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100vw;
+      overflow-x: hidden;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #2bb6bc;
+      color: #000;
+    }
+    .print-bar {
+      height: 50px;
+      background: #1e293b;
+      border-bottom: 2px solid #334155;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      flex-shrink: 0;
+    }
+    .print-bar button {
+      padding: 7px 24px;
+      background: #14507a;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .print-bar p { font-size: 11px; color: #94a3b8; }
+    .scroll-area {
+      min-height: 100vh;
+      overflow-y: auto;
+      padding: 14px 0 24px;
+    }
+    .page-container {
+      width: 794px;
+      height: 1123px;
+      min-height: 1123px;
+      margin: 0 auto 18px;
+      background: #fff;
+      padding: 20px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+    }
+    .receipt {
+      width: 100%;
+      height: 48%;
+      border: 3px solid #000;
+      border-radius: 20px;
+      padding: 20px;
+      box-sizing: border-box;
+      background: white;
+      page-break-inside: avoid;
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+    }
+    .receipt::before {
+      content: "";
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 560px;
+      height: 560px;
+      background-image: url('${logoBase64}');
+      background-repeat: no-repeat;
+      background-position: center;
+      background-size: contain;
+      opacity: 0.05;
+      z-index: 0;
+      pointer-events: none;
+    }
+    hr.dotted-sep {
+      width: 100%;
+      border: none;
+      border-top: 2px dashed #aaa;
+      margin: 12px 0;
+      position: relative;
+      z-index: 1;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      position: relative;
+      z-index: 1;
+    }
+    .logo-container {
+      width: 150px;
+      height: 150px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .logo-img {
+      width: 150px;
+      height: 150px;
+      object-fit: contain;
+    }
+    .header-center {
+      flex: 1;
+      text-align: center;
+      line-height: 1.2;
+    }
+    .org-name {
+      font-size: 36px;
+      font-weight: 900;
+      color: #000;
+      font-family: Arial Black, Arial, sans-serif;
+      letter-spacing: 1.5px;
+      margin: 0;
+    }
+    .org-sub {
+      font-size: 16px;
+      font-weight: bold;
+      color: #000;
+      letter-spacing: 0.5px;
+      margin: 2px 0 0 0;
+    }
+    .receipt-badge {
+      display: inline-block;
+      background: #000;
+      color: #fff;
+      font-size: 11px;
+      font-weight: bold;
+      letter-spacing: 2px;
+      padding: 3px 20px;
+      border-radius: 12px;
+      margin-top: 6px;
+      text-transform: uppercase;
+    }
+    .receipt-type {
+      font-size: 10px;
+      font-weight: bold;
+      color: #777;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+    .receipt-content {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      position: relative;
+      z-index: 1;
+      margin-top: 10px;
+    }
+    .field-row {
+      display: flex;
+      align-items: flex-end;
+      margin-top: 16px;
+      font-size: 14px;
+      font-weight: bold;
+      color: #000;
+      position: relative;
+      z-index: 1;
+    }
+    .field-label {
+      white-space: nowrap;
+      margin-right: 5px;
+    }
+    .field-underline {
+      flex: 1;
+      border-bottom: 1.5px solid #000;
+      padding-bottom: 1px;
+      padding-left: 8px;
+      font-weight: bold;
+      color: #000;
+    }
+    .checkbox-box {
+      width: 22px;
+      height: 22px;
+      border: 2px solid #000;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      font-weight: bold;
+      color: #000;
+      margin-left: 6px;
+      vertical-align: middle;
+      line-height: 1;
+      background: #fff;
+    }
+    .mode-badge {
+      background: #000;
+      color: #fff;
+      padding: 4px 10px;
+      border-radius: 5px;
+      font-size: 12.5px;
+      font-weight: bold;
+      margin-right: 15px;
+      text-transform: uppercase;
+      display: inline-block;
+    }
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-top: 20px;
+      position: relative;
+      z-index: 1;
+    }
+    .footer-notes {
+      font-size: 11px;
+      font-weight: bold;
+      line-height: 1.5;
+      color: #000;
+      text-align: left;
+    }
+    .signature-area {
+      font-size: 12px;
+      font-weight: bold;
+      color: #000;
+      white-space: nowrap;
+    }
+    @media print {
+      html, body { overflow: visible; height: auto; background: #fff; }
+      .print-bar { display: none !important; }
+      .scroll-area { height: auto; overflow: visible; padding: 0; }
+      .page-container {
+        width: 100%;
+        height: 100vh;
+        min-height: 100vh;
+        margin: 0;
+        padding: 20px;
+        box-shadow: none;
+        page-break-after: always;
+      }
+      .page-container:last-child { page-break-after: auto; }
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+  </style>
+</head>
+<body>
+  <div class="print-bar">
+    <button onclick="window.print()">&#128424; Print Receipt</button>
+    <p>Press Ctrl+P (Cmd+P on Mac) to print. Close this tab when done.</p>
+  </div>
+  <div class="scroll-area">
+    <div class="page-container">
+      <!-- Receipt 1 - Student Copy -->
+      <div class="receipt">
+        <div class="header">
+          <div class="logo-container"><img class="logo-img" src="${logoBase64}" alt="Logo" /></div>
+          <div class="header-center">
+            <div class="org-name">TRUSTCARE</div>
+            <div class="org-sub">INSTITUTE OF HEALTH SCIENCE</div>
+            <div class="receipt-badge">RECEIPT</div>
+            <div class="receipt-type">STUDENT COPY</div>
+          </div>
+          <div class="logo-container"><img class="logo-img" src="${logoBase64}" alt="Logo" /></div>
+        </div>
+        <div class="receipt-content">
+          <div class="field-row">
+            <div style="display: flex; flex: 1; align-items: flex-end;">
+              <span class="field-label">Receipt No.</span>
+              <span class="field-underline">${receiptNo}</span>
+            </div>
+            <div style="display: flex; width: 220px; align-items: flex-end; margin-left: 20px;">
+              <span class="field-label">Date :</span>
+              <span class="field-underline">${dateStr}</span>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <span class="field-label">Student Name :</span>
+            <span class="field-underline">${name}</span>
+          </div>
+
+          <div class="field-row">
+            <span class="field-label">Course Name :</span>
+            <span class="field-underline">${courseLabel}</span>
+          </div>
+
+          <div class="field-row" style="align-items: center;">
+            <span class="field-label">Purpose To Pay :</span>
+            <span style="display: inline-flex; align-items: center; margin-right: 15px;">
+              Admission Fee's
+              <span class="checkbox-box">&nbsp;</span>
+            </span>
+            <span style="display: inline-flex; align-items: center; margin-right: 15px;">
+              Course Fee's
+              <span class="checkbox-box">&#10003;</span>
+            </span>
+            <span style="display: inline-flex; align-items: center;">
+              Exam Fee's
+              <span class="checkbox-box">&#10003;</span>
+            </span>
+          </div>
+
+          <div class="field-row">
+            <div style="display: flex; flex: 1; align-items: flex-end;">
+              <span class="field-label">Total Amount :</span>
+              <span class="field-underline">${formattedAmount}</span>
+            </div>
+            <div style="display: flex; flex: 1; align-items: flex-end; margin-left: 15px;">
+              <span class="field-label">Paid Amt. :</span>
+              <span class="field-underline">${formattedAmount}</span>
+            </div>
+            <div style="display: flex; flex: 1; align-items: flex-end; margin-left: 15px;">
+              <span class="field-label">Balance Amt :</span>
+              <span class="field-underline">₹0</span>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <span class="field-label">Received By :</span>
+            <span class="field-underline">${userProfile?.username || "Admin"}</span>
+          </div>
+
+          <div class="field-row" style="align-items: center; margin-top: 18px;">
+            <span class="mode-badge">Mode of Payment:</span>
+            <span style="display: inline-flex; align-items: center; margin-right: 15px;">
+              Cash
+              <span class="checkbox-box">${mode.toLowerCase() === 'cash' ? '✓' : '&nbsp;'}</span>
+            </span>
+            <span style="display: inline-flex; align-items: center; margin-right: 15px;">
+              Online
+              <span class="checkbox-box">${(mode.toLowerCase() === 'online' || mode.toLowerCase() === 'upi' || mode.toLowerCase() === 'bank' || mode.toLowerCase() === 'gpay' || mode.toLowerCase() === 'phonepe') ? '✓' : '&nbsp;'}</span>
+            </span>
+            <span style="display: inline-flex; align-items: center;">
+              Cheque
+              <span class="checkbox-box">${mode.toLowerCase() === 'cheque' ? '✓' : '&nbsp;'}</span>
+            </span>
+          </div>
+        </div>
+        <div class="footer">
+          <div class="footer-notes">
+            <div>• Course Fees, Once Paid Cannot Be Refunded.</div>
+            <div style="margin-top: 3px;">• After Admission Is Completed Cancellation. Is Not Allowed.</div>
+          </div>
+          <div class="signature-area">
+            Authority Sign./Stamp &nbsp;................................
+          </div>
+        </div>
+      </div>
+
+      <hr class="dotted-sep" />
+
+      <!-- Receipt 2 - Office Copy -->
+      <div class="receipt">
+        <div class="header">
+          <div class="logo-container"><img class="logo-img" src="${logoBase64}" alt="Logo" /></div>
+          <div class="header-center">
+            <div class="org-name">TRUSTCARE</div>
+            <div class="org-sub">INSTITUTE OF HEALTH SCIENCE</div>
+            <div class="receipt-badge">RECEIPT</div>
+            <div class="receipt-type">CENTRE COPY</div>
+          </div>
+          <div class="logo-container"><img class="logo-img" src="${logoBase64}" alt="Logo" /></div>
+        </div>
+        <div class="receipt-content">
+          <div class="field-row">
+            <div style="display: flex; flex: 1; align-items: flex-end;">
+              <span class="field-label">Receipt No.</span>
+              <span class="field-underline">${receiptNo}</span>
+            </div>
+            <div style="display: flex; width: 220px; align-items: flex-end; margin-left: 20px;">
+              <span class="field-label">Date :</span>
+              <span class="field-underline">${dateStr}</span>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <span class="field-label">Student Name :</span>
+            <span class="field-underline">${name}</span>
+          </div>
+
+          <div class="field-row">
+            <span class="field-label">Course Name :</span>
+            <span class="field-underline">${courseLabel}</span>
+          </div>
+
+          <div class="field-row" style="align-items: center;">
+            <span class="field-label">Purpose To Pay :</span>
+            <span style="display: inline-flex; align-items: center; margin-right: 15px;">
+              Admission Fee's
+              <span class="checkbox-box">&nbsp;</span>
+            </span>
+            <span style="display: inline-flex; align-items: center; margin-right: 15px;">
+              Course Fee's
+              <span class="checkbox-box">&#10003;</span>
+            </span>
+            <span style="display: inline-flex; align-items: center;">
+              Exam Fee's
+              <span class="checkbox-box">&#10003;</span>
+            </span>
+          </div>
+
+          <div class="field-row">
+            <div style="display: flex; flex: 1; align-items: flex-end;">
+              <span class="field-label">Total Amount :</span>
+              <span class="field-underline">${formattedAmount}</span>
+            </div>
+            <div style="display: flex; flex: 1; align-items: flex-end; margin-left: 15px;">
+              <span class="field-label">Paid Amt. :</span>
+              <span class="field-underline">${formattedAmount}</span>
+            </div>
+            <div style="display: flex; flex: 1; align-items: flex-end; margin-left: 15px;">
+              <span class="field-label">Balance Amt :</span>
+              <span class="field-underline">₹0</span>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <span class="field-label">Received By :</span>
+            <span class="field-underline">${userProfile?.username || "Admin"}</span>
+          </div>
+
+          <div class="field-row" style="align-items: center; margin-top: 18px;">
+            <span class="mode-badge">Mode of Payment:</span>
+            <span style="display: inline-flex; align-items: center; margin-right: 15px;">
+              Cash
+              <span class="checkbox-box">${mode.toLowerCase() === 'cash' ? '✓' : '&nbsp;'}</span>
+            </span>
+            <span style="display: inline-flex; align-items: center; margin-right: 15px;">
+              Online
+              <span class="checkbox-box">${(mode.toLowerCase() === 'online' || mode.toLowerCase() === 'upi' || mode.toLowerCase() === 'bank' || mode.toLowerCase() === 'gpay' || mode.toLowerCase() === 'phonepe') ? '✓' : '&nbsp;'}</span>
+            </span>
+            <span style="display: inline-flex; align-items: center;">
+              Cheque
+              <span class="checkbox-box">${mode.toLowerCase() === 'cheque' ? '✓' : '&nbsp;'}</span>
+            </span>
+          </div>
+        </div>
+        <div class="footer">
+          <div class="footer-notes">
+            <div>• Course Fees, Once Paid Cannot Be Refunded.</div>
+            <div style="margin-top: 3px;">• After Admission Is Completed Cancellation. Is Not Allowed.</div>
+          </div>
+          <div class="signature-area">
+            Authority Sign./Stamp &nbsp;................................
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    setTimeout(() => {
+      window.print();
+    }, 500);
+  </script>
+</body>
+</html>`;
+
+    const popW = 794;
+    const popH = Math.min(screen.availHeight || 900, 1123);
+    const left = Math.max(0, Math.round((screen.width - popW) / 2));
+    const top = Math.max(0, Math.round((screen.height - popH) / 2));
+    const printWindow = window.open("", "_blank", `width=${popW},height=${popH},left=${left},top=${top},scrollbars=yes`);
     if (printWindow) {
       printWindow.document.write(receiptHTML);
       printWindow.document.close();
@@ -290,10 +628,10 @@ export default function ExamReceiptView({ userProfile, onGoBack }: ExamReceiptVi
       const res = await saveExamReceipt(receiptData);
       if (res.success) {
         showNotification("Exam fee receipt saved successfully! Printing...", "success");
-        
+
         // Print the receipt double layout
         printReceipt(receiptNumber, receiptDate, studentName, courseName, totalAmount, paymentMode, branch);
-        
+
         // Reset form except date
         setEnrollmentId("");
         setStudentName("");
@@ -301,7 +639,7 @@ export default function ExamReceiptView({ userProfile, onGoBack }: ExamReceiptVi
         setPaymentMode("");
         setAgreeTerms(false);
         setBranch("");
-        
+
         // Load next receipt number
         const nextReceipt = await getNextReceiptNumberEF();
         setReceiptNumber(nextReceipt);
@@ -320,13 +658,12 @@ export default function ExamReceiptView({ userProfile, onGoBack }: ExamReceiptVi
     <div className="relative w-full max-w-2xl mx-auto bg-slate-900/40 border border-slate-900/60 rounded-3xl p-6 sm:p-8 backdrop-blur-xl shadow-2xl overflow-hidden mt-4 glass-panel gpu-accelerated">
       {/* Toast Notification */}
       {notification && (
-        <div className={`fixed top-6 right-6 z-50 p-4 rounded-xl shadow-lg border backdrop-blur-md transition-all duration-300 transform translate-y-0 ${
-          notification.type === "success" 
-            ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" 
-            : notification.type === "error"
+        <div className={`fixed top-6 right-6 z-50 p-4 rounded-xl shadow-lg border backdrop-blur-md transition-all duration-300 transform translate-y-0 ${notification.type === "success"
+          ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
+          : notification.type === "error"
             ? "bg-rose-500/10 border-rose-500/20 text-rose-450"
             : "bg-teal-500/10 border-teal-500/20 text-teal-400"
-        }`}>
+          }`}>
           <div className="flex items-center gap-2.5">
             {notification.type === "success" && <CheckCircle2 className="h-4.5 w-4.5 text-emerald-400" />}
             {notification.type === "error" && <AlertTriangle className="h-4.5 w-4.5 text-rose-450" />}
@@ -355,7 +692,7 @@ export default function ExamReceiptView({ userProfile, onGoBack }: ExamReceiptVi
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-6">
-          
+
           {/* Enrollment ID Field */}
           <div className="space-y-1.5">
             <label htmlFor="enrollmentId" className="block text-xs font-semibold text-slate-400">

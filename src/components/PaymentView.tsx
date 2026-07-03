@@ -346,6 +346,7 @@ export default function PaymentView({
       branch: branch.toUpperCase(),
       totalPaidSoFar: paidUpToNow,
       balanceDue: balanceDue,
+      totalFees: totalPayable,
     });
   };
 
