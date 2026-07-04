@@ -41,9 +41,9 @@ interface AdmissionViewProps {
 
 // Course configurations per branch location (fallback when Firestore is unavailable)
 const getCourseConfig = (branch: string, course: string) => {
-  const branchLower = (branch || "kurla").toLowerCase();
+  const branchLower = (branch || "main").toLowerCase();
 
-  const kurlaData: any = {
+  const mainData: any = {
     anm_nursing: { duration: "1 Year", fees: 65000, admission_fee: 5000 },
     gnm_nursing: { duration: "3 Years", fees: 100000, admission_fee: 5000 },
     dmlt: { duration: "1 Year", fees: 70000, admission_fee: 5000 },
@@ -81,13 +81,13 @@ const getCourseConfig = (branch: string, course: string) => {
   if (branchLower === "karad") courseInfo = karadData[course];
   else if (branchLower === "nalasapora") courseInfo = nalasaporaData[course];
   else if (branchLower === "thane") courseInfo = thaneData[course];
-  else courseInfo = kurlaData[course]; // default to kurla
+  else courseInfo = mainData[course]; // default to main
 
   return courseInfo || { duration: "1 Year", fees: 30000, admission_fee: 5000 };
 };
 
 const coursesPerBranch: any = {
-  kurla: [
+  main: [
     { value: "anm_nursing", label: "ANM Nursing" },
     { value: "gnm_nursing", label: "GNM Nursing" },
     { value: "dmlt", label: "DMLT" },
@@ -138,7 +138,7 @@ export default function AdmissionView({
   const [firstName, setFirstName] = useState("");
   const [middleName, setMiddleName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [branch, setBranch] = useState<string>(userProfile?.branch || "kurla");
+  const [branch, setBranch] = useState<string>(userProfile?.branch || "main");
   const [course, setCourse] = useState("");
 
   // List of active inquiries for dynamic loading
@@ -196,10 +196,10 @@ export default function AdmissionView({
       setFirstName(inquiryData.firstName || "");
       setMiddleName(inquiryData.middleName || "");
       setLastName(inquiryData.lastName || "");
-      setBranch(inquiryData.branch || userProfile?.branch || "kurla");
+      setBranch(inquiryData.branch || userProfile?.branch || "main");
       setCourse(inquiryData.interestedCourse || "");
     } else {
-      setBranch(userProfile?.branch || "kurla");
+      setBranch(userProfile?.branch || "main");
     }
   }, [inquiryData, userProfile]);
 
@@ -235,13 +235,13 @@ export default function AdmissionView({
         let maxNum = 0;
         admissionsSnapshot.forEach((docSnap) => {
           const id = docSnap.id;
-          const match = id.match(/^ST(\d+)$/i);
+          const match = id.match(/^TCHS(\d+)$/i);
           if (match) {
             const num = parseInt(match[1], 10);
             if (num > maxNum) maxNum = num;
           }
         });
-        const nextEnrollment = "ST" + String(maxNum + 1).padStart(3, "0");
+        const nextEnrollment = "TCHS" + String(maxNum + 1).padStart(3, "0");
         setEnrollmentId(nextEnrollment);
       } catch (err) {
         console.error("Error loading IDs:", err);
@@ -347,7 +347,7 @@ export default function AdmissionView({
     }
   };
 
-  const activeCourseOptions = coursesPerBranch[branch.toLowerCase()] || coursesPerBranch.kurla;
+  const activeCourseOptions = coursesPerBranch[branch.toLowerCase()] || coursesPerBranch.main;
 
   return (
     <div className="relative w-full max-w-4xl mx-auto bg-slate-900/40 border border-slate-900/60 rounded-3xl p-6 sm:p-8 backdrop-blur-xl shadow-2xl overflow-hidden mt-4 glass-panel gpu-accelerated">
@@ -400,7 +400,7 @@ export default function AdmissionView({
                       setFirstName("");
                       setMiddleName("");
                       setLastName("");
-                      setBranch(userProfile?.branch || "kurla");
+                      setBranch(userProfile?.branch || "main");
                       setCourse("");
                     }
                   }}
@@ -535,7 +535,7 @@ export default function AdmissionView({
                   disabled={!!inquiryData}
                   required
                 >
-                  <option value="kurla">Kurla</option>
+                  <option value="main">Main</option>
                   <option value="karad">Karad</option>
                   <option value="nalasapora">Nalasapora</option>
                   <option value="thane">Thane</option>

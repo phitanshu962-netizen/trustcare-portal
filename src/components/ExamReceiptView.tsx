@@ -705,7 +705,7 @@ export default function ExamReceiptView({ userProfile, onGoBack }: ExamReceiptVi
                 value={enrollmentId}
                 onChange={(e) => setEnrollmentId(e.target.value)}
                 onBlur={handleEnrollmentIdBlur}
-                placeholder="Enter Student Enrollment ID (e.g. ST001)"
+                placeholder="Enter Student Enrollment ID (e.g. TCHS001)"
                 className="w-full bg-slate-950/80 border border-slate-850 focus:border-teal-500/50 rounded-xl pl-4 pr-10 py-2.5 text-sm text-slate-100 placeholder-slate-700 focus:outline-none transition-colors font-medium"
                 required
               />

@@ -149,7 +149,7 @@ export default function ProfileSettings({ userProfile, onProfileUpdated }: Profi
                             value={instituteName}
                             onChange={(e) => setInstituteName(e.target.value)}
                             className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-700 focus:outline-none focus:border-teal-500/50 transition-colors"
-                            placeholder="e.g. Shelar Training Institute"
+                            placeholder="e.g. TrustCare Institute"
                         />
                         <p className="text-[10px] text-slate-600">This name appears on receipts and reports.</p>
                     </div>

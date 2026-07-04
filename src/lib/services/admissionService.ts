@@ -9,7 +9,8 @@ import {
   Timestamp, 
   orderBy, 
   where,
-  updateDoc
+  updateDoc,
+  deleteDoc
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
@@ -211,5 +212,15 @@ export async function getAdmissionAnalytics(branchFilter?: string) {
   } catch (error) {
     console.error("Error getting admission analytics:", error);
     return { data: [], summary: { totalRecords: 0, totalFees: 0, averageFees: 0, topCourse: "-" } };
+  }
+}
+
+export async function deleteAdmission(admissionId: string) {
+  try {
+    await deleteDoc(doc(db, "admissions", admissionId));
+    return { success: true, message: "Admission deleted successfully" };
+  } catch (error: any) {
+    console.error("Error deleting admission:", error);
+    return { success: false, message: error.message };
   }
 }
