@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { UserProfile } from "../lib/services/authService";
 import { getFeeStructureData } from "../lib/services/paymentService";
-import { getAdmissionAnalytics, AdmissionData } from "../lib/services/admissionService";
-import { getInquiryAnalytics, InquiryData } from "../lib/services/inquiryService";
+import { getAdmissionAnalytics, AdmissionData, deleteAdmission } from "../lib/services/admissionService";
+import { getInquiryAnalytics, InquiryData, deleteInquiry } from "../lib/services/inquiryService";
 import { 
   GraduationCap, 
   Clock, 
@@ -27,7 +27,8 @@ import {
   Loader2,
   AlertCircle,
   Sparkles,
-  ArrowUpDown
+  ArrowUpDown,
+  Trash2
 } from "lucide-react";
 
 interface AnalyticsViewProps {
@@ -683,7 +684,7 @@ export default function AnalyticsView({
       </div>
 
       {/* Table Container */}
-      <div className="overflow-x-auto border border-slate-900 bg-slate-950/40 rounded-2xl">
+      <div className="w-full overflow-x-auto border border-slate-900 bg-slate-950/40 rounded-2xl">
         {loading ? (
           <div className="py-20 flex flex-col items-center justify-center gap-3">
             <Loader2 className="h-8 w-8 animate-spin text-teal-400" />
@@ -695,7 +696,7 @@ export default function AnalyticsView({
             No records match the active criteria.
           </div>
         ) : (
-          <table className="w-full text-left border-collapse text-xs">
+          <table className="w-full text-left border-collapse text-xs whitespace-nowrap">
             <thead>
               <tr className="border-b border-slate-900 bg-slate-900/10 text-slate-450 uppercase tracking-wider text-[10px] font-bold">
                 
@@ -804,13 +805,31 @@ export default function AnalyticsView({
                   {/* ADMISSION ROWS */}
                   {activeTab === "admission-analytics" && (
                     <>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 flex gap-2">
                         <button
                           onClick={() => onCoursePayment(row.enrollmentId, row.studentName, row.courseName, row.totalCourseFees, row.branch)}
                           className="px-2.5 py-1 bg-gradient-to-r from-teal-500/10 to-indigo-500/10 border border-teal-500/25 text-teal-400 hover:opacity-90 active:scale-95 transition-all rounded-lg font-bold text-[10px] flex items-center gap-1.5 cursor-pointer hover-lift"
                         >
                           <CircleDollarSign className="h-3.5 w-3.5 text-teal-450" /> Course Pay
                         </button>
+                        {userProfile?.role === "admin" && (
+                          <button
+                            onClick={async () => {
+                              if (window.confirm("Are you sure you want to delete this admission record?")) {
+                                const res = await deleteAdmission(row.id || "");
+                                if (res.success) {
+                                  setAdmissions(prev => prev.filter(a => a.id !== row.id));
+                                } else {
+                                  alert(res.message);
+                                }
+                              }
+                            }}
+                            className="px-2.5 py-1 bg-rose-500/10 border border-rose-500/25 text-rose-400 hover:opacity-90 active:scale-95 transition-all rounded-lg flex items-center justify-center cursor-pointer hover-lift"
+                            title="Delete Admission"
+                          >
+                            <Trash2 className="h-3.5 w-3.5 text-rose-450" />
+                          </button>
+                        )}
                       </td>
                       <td className="px-4 py-3 font-mono text-[10px] text-slate-500">{row.date}</td>
                       <td className="px-4 py-3 text-slate-450 font-medium">{row.receiptNumber}</td>
@@ -827,9 +846,9 @@ export default function AnalyticsView({
                   {/* INQUIRY ROWS */}
                   {activeTab === "inquiry-analytics" && (
                     <>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 flex gap-2 items-center">
                         {row.admissionStatus === "Admitted" ? (
-                          <span className="px-2.5 py-1 bg-slate-950 text-slate-600 rounded-lg text-[9px] font-bold border border-slate-900">
+                          <span className="px-2.5 py-1 bg-slate-950 text-slate-600 rounded-lg text-[9px] font-bold border border-slate-900 h-full flex items-center">
                             Admitted
                           </span>
                         ) : (
@@ -837,7 +856,25 @@ export default function AnalyticsView({
                             onClick={() => onTakeAdmission(row)}
                             className="px-2.5 py-1 bg-gradient-to-r from-teal-400 to-indigo-400 text-slate-950 hover:opacity-90 active:scale-95 transition-all rounded-lg font-bold text-[10px] flex items-center gap-1 shadow-md shadow-teal-400/5 cursor-pointer hover-lift"
                           >
-                            <UserCheck className="h-3.5 w-3.5 text-slate-950" /> Admit
+                            <UserCheck className="h-3.5 w-3.5 text-slate-950" /> Take Admission
+                          </button>
+                        )}
+                        {userProfile?.role === "admin" && (
+                          <button
+                            onClick={async () => {
+                              if (window.confirm("Are you sure you want to delete this inquiry record?")) {
+                                const res = await deleteInquiry(row.id || "");
+                                if (res.success) {
+                                  setInquiries(prev => prev.filter(i => i.id !== row.id));
+                                } else {
+                                  alert(res.message);
+                                }
+                              }
+                            }}
+                            className="px-2.5 py-1 bg-rose-500/10 border border-rose-500/25 text-rose-400 hover:opacity-90 active:scale-95 transition-all rounded-lg flex items-center justify-center cursor-pointer hover-lift h-full"
+                            title="Delete Inquiry"
+                          >
+                            <Trash2 className="h-3.5 w-3.5 text-rose-450" />
                           </button>
                         )}
                       </td>

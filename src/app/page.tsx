@@ -264,7 +264,7 @@ export default function Home() {
   // DASHBOARD VIEW (Logged In)
   if (userProfile) {
     return (
-      <div className="flex min-h-screen bg-slate-950 text-slate-100 font-sans">
+      <div className="min-h-screen w-full bg-slate-950 text-slate-100 font-sans overflow-x-hidden">
 
         {/* Sidebar Container */}
         <Sidebar
@@ -276,7 +276,7 @@ export default function Home() {
         />
 
         {/* Dashboard Main Workspace */}
-        <div className="flex-1 md:pl-64 flex flex-col min-h-screen">
+        <div className="md:ml-64 flex flex-col min-h-screen w-auto max-w-full">
 
           {/* Mobile responsive navigation header */}
           <header className="md:hidden flex items-center justify-between px-6 py-4 bg-slate-950/80 border-b border-slate-900 sticky top-0 z-20 backdrop-blur-md">
@@ -359,7 +359,7 @@ export default function Home() {
           )}
 
           {/* Tab Views Panel */}
-          <main className="flex-1 p-4 sm:p-6 md:p-8">
+          <main className="flex-1 p-4 sm:p-6 md:p-8 w-full max-w-full min-w-0 overflow-x-hidden">
             {activeTab === "inquiry" && (
               <InquiryView
                 userProfile={userProfile}

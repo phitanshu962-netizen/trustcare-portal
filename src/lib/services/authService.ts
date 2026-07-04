@@ -91,7 +91,7 @@ export async function loginUser(username: string, password: string): Promise<Use
       email,
       username: username.split("@")[0],
       role: ADMIN_EMAILS.includes(email) ? "admin" : "staff",
-      branch: "kurla"
+      branch: "main"
     };
     await setDoc(doc(db, "users", uid), defaultProfile);
     return defaultProfile;
@@ -129,7 +129,7 @@ export function subscribeToAuth(callback: (user: FirebaseUser | null, profile: U
           email,
           username: email.split("@")[0],
           role: ADMIN_EMAILS.includes(email) ? "admin" : "staff",
-          branch: "kurla"
+          branch: "main"
         });
       }
     } else {
@@ -153,7 +153,7 @@ export async function loginWithGoogle(): Promise<UserProfile> {
       email,
       username: (user.displayName || email).split("@")[0].replace(/\s+/g, "_").toLowerCase(),
       role: ADMIN_EMAILS.includes(email) ? "admin" : "staff",
-      branch: "kurla"
+      branch: "main"
     };
     await setDoc(doc(db, "users", user.uid), {
       ...profile,

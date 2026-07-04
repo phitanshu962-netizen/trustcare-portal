@@ -394,7 +394,7 @@ export default function PaymentView({
               value={enrollmentId}
               onChange={(e) => setEnrollmentId(e.target.value)}
               className="flex-1 bg-slate-950/80 border border-slate-850 rounded-xl px-4 py-2 text-sm text-slate-100 placeholder-slate-700 focus:outline-none focus:border-teal-500/50 font-medium"
-              placeholder="e.g. ST001"
+              placeholder="e.g. TCHS001"
               disabled={locked}
             />
             {!locked && (

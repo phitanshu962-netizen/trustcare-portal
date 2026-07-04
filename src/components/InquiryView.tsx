@@ -107,7 +107,7 @@ export default function InquiryView({ userProfile, onTakeAdmission }: InquiryVie
         // Make sure we keep the new date/Aadhaar/takenBy if not in lookup
         date: formData.date,
         aadharNumber: aadharFound.aadharNumber || formData.aadharNumber,
-        branch: userProfile?.branch || aadharFound.branch || "kurla"
+        branch: userProfile?.branch || aadharFound.branch || "main"
       });
       setShowPopup(false);
     }
@@ -138,7 +138,7 @@ export default function InquiryView({ userProfile, onTakeAdmission }: InquiryVie
       // Reset form (keep branch and taken by)
       setFormData({
         ...initialFormState,
-        branch: userProfile?.branch || "kurla",
+        branch: userProfile?.branch || "main",
         inquiryTakenBy: userProfile?.username || ""
       });
       setAgree(false);

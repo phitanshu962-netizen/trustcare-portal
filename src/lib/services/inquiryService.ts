@@ -9,7 +9,8 @@ import {
   addDoc, 
   Timestamp, 
   orderBy,
-  updateDoc
+  updateDoc,
+  deleteDoc
 } from "firebase/firestore";
 
 export interface InquiryData {
@@ -147,7 +148,17 @@ export async function getInquiryAnalytics(branchFilter?: string) {
       }
     };
   } catch (error) {
-    console.error("Error getting inquiry analytics:", error);
+    console.error("Error fetching analytics:", error);
     return { data: [], summary: { totalRecords: 0, uniqueCourses: 0, topCourse: "-" } };
+  }
+}
+
+export async function deleteInquiry(inquiryId: string) {
+  try {
+    await deleteDoc(doc(db, "inquiries", inquiryId));
+    return { success: true, message: "Inquiry deleted successfully" };
+  } catch (error: any) {
+    console.error("Error deleting inquiry:", error);
+    return { success: false, message: error.message };
   }
 }
