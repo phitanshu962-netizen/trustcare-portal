@@ -154,6 +154,17 @@ export default function AdmissionView({
 
   // Use Firestore-based config with fallback to inline config
   const [config, setConfig] = useState({ duration: "1 Year", fees: 30000, admission_fee: 5000 });
+  const [courseList, setCourseList] = useState<Course[]>([]);
+
+  // Fetch courses dynamically for dropdown
+  useEffect(() => {
+    getAllCourses().then((courses) => {
+      setCourseList(courses.filter(c => c.active !== false));
+    }).catch(() => {
+      setCourseList([]);
+    });
+  }, []);
+
 
   // Fetch course configuration dynamically from Firestore
   useEffect(() => {
@@ -539,6 +550,9 @@ export default function AdmissionView({
                   <option value="karad">Karad</option>
                   <option value="nalasapora">Nalasapora</option>
                   <option value="thane">Thane</option>
+                  {branch && !["main", "karad", "nalasapora", "thane"].includes(branch.toLowerCase()) && (
+                    <option value={branch} className="capitalize">{branch.replace(/_/g, " ")}</option>
+                  )}
                 </select>
               </div>
 
@@ -553,9 +567,13 @@ export default function AdmissionView({
                   required
                 >
                   <option value="">Select Course</option>
-                  {activeCourseOptions.map((c: any) => (
-                    <option key={c.value} value={c.value}>{c.label}</option>
-                  ))}
+                  {courseList.length === 0 ? (
+                    <option value="" disabled>No courses available</option>
+                  ) : (
+                    courseList.map((c) => (
+                      <option key={c.courseId} value={c.courseId}>{c.courseName}</option>
+                    ))
+                  )}
                 </select>
               </div>
             </div>

@@ -122,6 +122,7 @@ export default function PaymentView({
         setSchedule(saved);
         setLocked(true);
         setConfirmed(true);
+        setPaymentType(saved.length === 1 ? "full" : "emi");
         const firstDoc = await getStudentDataByEnrollmentId(id);
         if (firstDoc.success) {
           setBranch(firstDoc.branch || userProfile?.branch || "MAIN");
@@ -563,7 +564,7 @@ export default function PaymentView({
           id="payMethod"
           value={paymentMethod}
           onChange={(e) => setPaymentMethod(e.target.value)}
-          disabled={locked}
+          disabled={false}
           className="w-full max-w-xs bg-slate-950/80 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-slate-350 focus:outline-none focus:border-teal-500/50 transition-colors font-medium cursor-pointer"
           required
         >
