@@ -88,7 +88,7 @@ export function openInstallmentReceipt(params: {
     html, body {
       width: 100vw;
       overflow-x: hidden;
-      font-family: Arial, Helvetica, sans-serif;
+      font-family: 'Times New Roman', Times, serif;
       background: #2bb6bc;
       color: #000;
     }
@@ -200,7 +200,7 @@ export function openInstallmentReceipt(params: {
       font-size: 36px;
       font-weight: 900;
       color: #000;
-      font-family: Arial Black, Arial, sans-serif;
+      font-family: 'Times New Roman', Times, serif;
       letter-spacing: 1.5px;
       margin: 0;
     }
@@ -649,7 +649,7 @@ export function openCoursePaymentReceipt(data: ReceiptData) {
 
       tablesHtml += `
         <div style="margin-top:10px;">
-          <div style="font-weight:bold;font-size:13px;margin-bottom:4px;color:#000;font-family:Arial, sans-serif;">
+          <div style="font-weight:bold;font-size:13px;margin-bottom:4px;color:#000;font-family:'Times New Roman', Times, serif;">
             ${y + 1}<sup>${suffix(y + 1)}</sup> Year Fee's 20
           </div>
           <table style="width:100%;border-collapse:collapse;border:1.5px solid #000;table-layout:fixed;margin-bottom:4px;">
@@ -681,7 +681,7 @@ export function openCoursePaymentReceipt(data: ReceiptData) {
       width: 100vw;
       height: 100vh;
       overflow: hidden;
-      font-family: Arial, Helvetica, sans-serif;
+      font-family: 'Times New Roman', Times, serif;
       background: #2bb6bc;
       color: #000;
     }
@@ -794,7 +794,7 @@ export function openCoursePaymentReceipt(data: ReceiptData) {
     <div style="display:flex;align-items:center;gap:14px;padding-bottom:12px;margin-bottom:6px;position:relative;z-index:2;">
       <img src="${logoBase64}" alt="Logo" style="width:126px;height:126px;object-fit:cover;flex-shrink:0;" />
       <div style="flex-grow:1;">
-        <div style="color:#0b5175;font-size:23px;font-weight:900;letter-spacing:0.3px;line-height:1.2;font-family:'Arial Black', Impact, Arial, sans-serif;">TRUSTCARE INSTITUTE OF HEALTH SCIENCE</div>
+        <div style="color:#0b5175;font-size:23px;font-weight:900;letter-spacing:0.3px;line-height:1.2;font-family:'Times New Roman', Times, serif;">TRUSTCARE INSTITUTE OF HEALTH SCIENCE</div>
         <div style="font-weight:700;font-size:11.5px;color:#000;margin-top:5px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
           <span>Email: trustcareinstitute03@gmail.com</span>
           <span style="color:#555;">|</span>
@@ -815,7 +815,7 @@ export function openCoursePaymentReceipt(data: ReceiptData) {
     </div>
 
     <!-- Title Banner -->
-    <div style="background:#14507a;color:#fff;text-align:center;font-weight:900;font-size:20px;padding:8px 0;margin-bottom:16px;clip-path:polygon(15px 0%, 100% 0%, calc(100% - 15px) 100%, 0% 100%);letter-spacing:2px;max-width:320px;margin-left:auto;margin-right:auto;position:relative;z-index:2;font-family:Arial, sans-serif;">
+    <div style="background:#14507a;color:#fff;text-align:center;font-weight:900;font-size:20px;padding:8px 0;margin-bottom:16px;clip-path:polygon(15px 0%, 100% 0%, calc(100% - 15px) 100%, 0% 100%);letter-spacing:2px;max-width:320px;margin-left:auto;margin-right:auto;position:relative;z-index:2;font-family:'Times New Roman', Times, serif;">
       ADMISSION FORM
     </div>
 
@@ -867,7 +867,7 @@ export function openCoursePaymentReceipt(data: ReceiptData) {
       ${installmentTableHtml}
 
       <!-- Total Payable -->
-      <div style="margin-top:10px;text-align:right;font-size:14px;font-weight:900;color:#000;border-top:1.5px solid #000;padding-top:6px;font-family:Arial, sans-serif;">
+      <div style="margin-top:10px;text-align:right;font-size:14px;font-weight:900;color:#000;border-top:1.5px solid #000;padding-top:6px;font-family:'Times New Roman', Times, serif;">
         Total Payable : <span style="font-size:16px;">${formattedPayable}</span>
       </div>
     </div>
@@ -883,13 +883,13 @@ export function openCoursePaymentReceipt(data: ReceiptData) {
           &nbsp;&#8212; I Agree with Terms And Condition.
         </div>
         <!-- Marathi declaration -->
-        <div style="font-size:12px;font-weight:800;color:#000;line-height:1.7;font-family:Arial, sans-serif;">
+        <div style="font-size:12px;font-weight:800;color:#000;line-height:1.7;font-family:'Times New Roman', Times, serif;">
           &#2350;&#2366;.&#2358;&#2381;&#2352;&#2368;./&#2358;&#2381;&#2352;&#2368;&#2350;&#2340;&#2368; <span style="border-bottom:1.5px solid #000;display:inline-block;min-width:160px;padding:0 4px;font-weight:700;">&nbsp;${data.guardianName || ""}</span>
           &#2310;&#2312; / &#2357;&#2337;&#2368;&#2354; / &#2346;&#2340;&#2381;&#2344;&#2368; / &#2348;&#2361;&#2368;&#2339; / &#2349;&#2366;&#2313; &mdash;
           &#2350;&#2354;&#2366; &#2360;&#2352;&#2381;&#2357; &#2309;&#2335;&#2368; &#2350;&#2306;&#2332;&#2369;&#2352; &#2310;&#2361;&#2375;&#2340;.
         </div>
       </div>
-      <div style="display:flex;justify-content:space-between;margin-top:18px;font-weight:800;font-size:12px;color:#000;font-family:Arial, sans-serif;">
+      <div style="display:flex;justify-content:space-between;margin-top:18px;font-weight:800;font-size:12px;color:#000;font-family:'Times New Roman', Times, serif;">
         <div style="text-align:center;width:28%;">
           <div style="height:36px;"></div>
           <div style="border-top:1.5px solid #000;padding-top:4px;">Parent's Sign.</div>
@@ -914,7 +914,7 @@ export function openCoursePaymentReceipt(data: ReceiptData) {
     <div style="display:flex;align-items:center;gap:14px;padding-bottom:12px;margin-bottom:6px;position:relative;z-index:2;">
       <img src="${logoBase64}" alt="Logo" style="width:126px;height:126px;object-fit:cover;flex-shrink:0;" />
       <div style="flex-grow:1;">
-        <div style="color:#0b5175;font-size:23px;font-weight:900;letter-spacing:0.3px;line-height:1.2;font-family:'Arial Black', Impact, Arial, sans-serif;">TRUSTCARE INSTITUTE OF HEALTH SCIENCE</div>
+        <div style="color:#0b5175;font-size:23px;font-weight:900;letter-spacing:0.3px;line-height:1.2;font-family:'Times New Roman', Times, serif;">TRUSTCARE INSTITUTE OF HEALTH SCIENCE</div>
         <div style="font-weight:700;font-size:11.5px;color:#000;margin-top:5px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
           <span>Email: trustcareinstitute03@gmail.com</span>
           <span style="color:#555;">|</span>
@@ -973,13 +973,13 @@ export function openCoursePaymentReceipt(data: ReceiptData) {
           &nbsp;&#8212; I Agree with Terms And Condition.
         </div>
         <!-- Marathi declaration -->
-        <div style="font-size:12px;font-weight:800;color:#000;line-height:1.7;font-family:Arial, sans-serif;">
+        <div style="font-size:12px;font-weight:800;color:#000;line-height:1.7;font-family:'Times New Roman', Times, serif;">
           &#2350;&#2368; &#2358;&#2381;&#2352;&#2368;/ &#2358;&#2381;&#2352;&#2368;&#2350;&#2340;&#2368; <span style="border-bottom:1.5px solid #000;display:inline-block;min-width:130px;padding:0 4px;font-weight:700;">&nbsp;${data.guardianName || ""}&nbsp;</span>
           ,&nbsp;<span style="border-bottom:1.5px solid #000;display:inline-block;min-width:110px;padding:0 4px;font-weight:700;">&nbsp;${data.guardianRelation || ""}&nbsp;</span>
           &#2310;&#2312;/&#2357;&#2337;&#2368;&#2354;/&#2346;&#2340;&#2368;/&#2348;&#2361;&#2368;&#2339;/&#2349;&#2366;&#2313; &mdash; &#2350;&#2354;&#2366; &#2360;&#2352;&#2381;&#2357; &#2309;&#2335;&#2368; &#2350;&#2306;&#2332;&#2369;&#2352; &#2310;&#2361;&#2375;&#2340;.
         </div>
       </div>
-      <div style="display:flex;justify-content:space-between;margin-top:18px;font-weight:800;font-size:12px;color:#000;font-family:Arial, sans-serif;">
+      <div style="display:flex;justify-content:space-between;margin-top:18px;font-weight:800;font-size:12px;color:#000;font-family:'Times New Roman', Times, serif;">
         <div style="text-align:center;width:28%;">
           <div style="height:36px;"></div>
           <div style="border-top:1.5px solid #000;padding-top:4px;">Parent's Sign.</div>

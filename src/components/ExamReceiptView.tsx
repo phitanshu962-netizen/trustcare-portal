@@ -132,7 +132,7 @@ export default function ExamReceiptView({ userProfile, onGoBack }: ExamReceiptVi
     html, body {
       width: 100vw;
       overflow-x: hidden;
-      font-family: Arial, Helvetica, sans-serif;
+      font-family: 'Times New Roman', Times, serif;
       background: #2bb6bc;
       color: #000;
     }
@@ -244,7 +244,7 @@ export default function ExamReceiptView({ userProfile, onGoBack }: ExamReceiptVi
       font-size: 36px;
       font-weight: 900;
       color: #000;
-      font-family: Arial Black, Arial, sans-serif;
+      font-family: 'Times New Roman', Times, serif;
       letter-spacing: 1.5px;
       margin: 0;
     }
