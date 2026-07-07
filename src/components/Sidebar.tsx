@@ -63,12 +63,12 @@ export default function Sidebar({
       {/* Header */}
       <div className="px-6 py-6 border-b border-slate-900 bg-slate-950/20 flex flex-col items-center justify-center">
         <div className="mb-3 flex items-center justify-center">
-          <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl bg-white shadow-lg shadow-teal-500/20 p-1">
+          <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-xl bg-white shadow-lg shadow-teal-500/20 p-1">
             <img src="/TrustCareLogo.avif" alt="TrustCare Logo" className="w-full h-full object-contain" />
           </div>
         </div>
         <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-teal-600 to-indigo-600 bg-clip-text text-transparent">
-          TrustCare Portal
+          TrustCare
         </span>
         <div className="mt-3 flex flex-col items-center gap-1">
           <p className="text-[10px] text-slate-400 uppercase tracking-widest font-semibold">

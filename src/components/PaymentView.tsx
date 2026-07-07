@@ -360,7 +360,6 @@ export default function PaymentView({
         <h1 className="text-2xl sm:text-3xl font-extrabold bg-gradient-to-r from-teal-600 to-indigo-600 bg-clip-text text-transparent flex items-center justify-center gap-3">
           <CircleDollarSign className="h-7 w-7 text-teal-400" />COURSE PAYMENT
         </h1>
-        <p className="text-xs text-slate-500 mt-1 uppercase tracking-widest font-semibold">Configure student payment plan and record installment checks</p>
       </div>
 
       {/* Status Messages */}
@@ -430,7 +429,7 @@ export default function PaymentView({
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div className="bg-slate-900/20 border border-slate-900 p-4 rounded-2xl flex flex-col justify-center">
-          <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Trainee Course</span>
+          <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Selected Course</span>
           <span className="text-sm font-bold text-slate-350 capitalize mt-1">
             {courseName ? courseName.replace(/_/g, " ") : "Not selected"}
           </span>

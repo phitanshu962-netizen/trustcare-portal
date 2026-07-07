@@ -18,7 +18,7 @@ export interface UserProfile {
   branch: string;
 }
 
-const ADMIN_EMAILS = ["phitanshu962@gmail.com", "harshnpc21@gmail.com"];
+const ADMIN_EMAILS = ["phitanshu962@gmail.com", "harshnpc21@gmail.com", "trustcareinstitute03@gmail.com"];
 
 // Convert a username to a standardized email for Firebase Auth
 export function usernameToEmail(username: string): string {

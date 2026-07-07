@@ -371,7 +371,6 @@ export default function AdmissionView({
         <h1 className="text-2xl sm:text-3xl font-extrabold bg-gradient-to-r from-teal-600 to-indigo-600 bg-clip-text text-transparent flex items-center justify-center gap-3">
           <FileText className="h-7 w-7 text-teal-400" />ADMISSION FORM
         </h1>
-        <p className="text-xs text-slate-500 mt-1 uppercase tracking-widest font-semibold">Complete admission registration for selected trainee</p>
       </div>
 
       {loading ? (
