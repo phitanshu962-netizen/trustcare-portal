@@ -1,15 +1,14 @@
 import { db } from "../firebase";
-import { 
-  collection, 
-  query, 
-  where, 
-  getDocs, 
-  doc, 
-  setDoc, 
-  addDoc, 
-  Timestamp, 
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  doc,
+  setDoc,
+  addDoc,
+  Timestamp,
   orderBy,
-  updateDoc,
   deleteDoc
 } from "firebase/firestore";
 
@@ -47,11 +46,11 @@ export async function checkAadharNumberInquiry(aadharNumber: string): Promise<In
   try {
     const q = query(collection(db, "inquiries"), where("aadharNumber", "==", aadharNumber));
     const querySnapshot = await getDocs(q);
-    
+
     if (querySnapshot.empty) {
       return null;
     }
-    
+
     const docSnap = querySnapshot.docs[0];
     return { id: docSnap.id, ...docSnap.data() } as InquiryData;
   } catch (error) {
@@ -74,7 +73,7 @@ export async function submitInquiryData(formData: InquiryData): Promise<{ succes
     // Build combined fields
     const fullName = [formData.firstName, formData.middleName, formData.lastName].filter(Boolean).join(" ");
     const address = [formData.addressLine1, formData.addressLine2, formData.addressLine3, `Pincode: ${formData.pincode}`].filter(Boolean).join(", ");
-    
+
     const completeData: any = {
       ...formData,
       fullName,
@@ -86,23 +85,23 @@ export async function submitInquiryData(formData: InquiryData): Promise<{ succes
 
     // Check if duplicate exists (Aadhar lookup)
     const existing = await checkAadharNumberInquiry(formData.aadharNumber);
-    
+
     if (existing && existing.id) {
-      // Update existing record
+      // Update existing record using setDoc with merge (handles race condition)
       const docRef = doc(db, "inquiries", existing.id);
-      await updateDoc(docRef, completeData);
-      return { 
-        success: true, 
-        message: "Inquiry record updated successfully!", 
-        data: { id: existing.id, ...completeData } 
+      await setDoc(docRef, completeData, { merge: true });
+      return {
+        success: true,
+        message: "Inquiry record updated successfully!",
+        data: { id: existing.id, ...completeData }
       };
     } else {
       // Add new record
       const docRef = await addDoc(collection(db, "inquiries"), completeData);
-      return { 
-        success: true, 
-        message: "New inquiry added successfully!", 
-        data: { id: docRef.id, ...completeData } 
+      return {
+        success: true,
+        message: "New inquiry added successfully!",
+        data: { id: docRef.id, ...completeData }
       };
     }
   } catch (error: any) {
@@ -118,27 +117,27 @@ export async function getInquiryAnalytics(branchFilter?: string) {
     if (branchFilter && branchFilter !== "all") {
       q = query(collection(db, "inquiries"), where("branch", "==", branchFilter), orderBy("timestamp", "desc"));
     }
-    
+
     const querySnapshot = await getDocs(q);
     const data: InquiryData[] = [];
     const courseCounts: { [key: string]: number } = {};
-    
+
     querySnapshot.forEach((docSnap) => {
       const docData = docSnap.data();
       const row = { id: docSnap.id, ...docData } as InquiryData;
       data.push(row);
-      
+
       const course = row.interestedCourse;
       if (course) {
         courseCounts[course] = (courseCounts[course] || 0) + 1;
       }
     });
-    
+
     let topCourse = "-";
     if (Object.keys(courseCounts).length > 0) {
       topCourse = Object.keys(courseCounts).reduce((a, b) => courseCounts[a] > courseCounts[b] ? a : b);
     }
-    
+
     return {
       data,
       summary: {

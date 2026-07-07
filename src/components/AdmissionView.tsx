@@ -138,8 +138,9 @@ export default function AdmissionView({
   const [firstName, setFirstName] = useState("");
   const [middleName, setMiddleName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [branch, setBranch] = useState<string>(userProfile?.branch || "main");
+  const [branch] = useState<string>(userProfile?.branch || "main");
   const [course, setCourse] = useState("");
+  const [email, setEmail] = useState("");
 
   // List of active inquiries for dynamic loading
   const [inquiriesList, setInquiriesList] = useState<InquiryData[]>([]);
@@ -207,10 +208,8 @@ export default function AdmissionView({
       setFirstName(inquiryData.firstName || "");
       setMiddleName(inquiryData.middleName || "");
       setLastName(inquiryData.lastName || "");
-      setBranch(inquiryData.branch || userProfile?.branch || "main");
       setCourse(inquiryData.interestedCourse || "");
-    } else {
-      setBranch(userProfile?.branch || "main");
+      setEmail(inquiryData.email || "");
     }
   }, [inquiryData, userProfile]);
 
@@ -318,13 +317,42 @@ export default function AdmissionView({
       agreement: agree ? "Agreed" : "Not Agreed",
       user: userProfile?.username || "Admin",
       date: new Date().toISOString().split("T")[0],
-      branch
+      branch,
+      email
     };
 
     const res = await saveAdmissionData(admissionDoc, photoFile);
     setSubmitting(false);
 
     if (res.success) {
+      // Auto-send email to student if email exists
+      if (email) {
+        try {
+          await fetch("/api/send-email", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              to: email,
+              type: "admission",
+              data: {
+                receiptNo: receiptNumber,
+                date: new Date(admissionDoc.date).toLocaleDateString("en-GB"),
+                studentName: studentName,
+                courseName: course,
+                courseDuration: config.duration,
+                amountPaid: config.admission_fee,
+                paymentMode: paymentMode,
+                receivedBy: userProfile?.username || "Admin",
+                branch: branch.toUpperCase()
+              }
+            })
+          });
+        } catch (mailErr) {
+          console.warn("Error sending auto email receipt:", mailErr);
+        }
+      }
       // Generate and open the Admission Receipt using the installment receipt format
       openInstallmentReceipt({
         receiptNo: receiptNumber,
@@ -358,7 +386,7 @@ export default function AdmissionView({
     }
   };
 
-  const activeCourseOptions = coursesPerBranch[branch.toLowerCase()] || coursesPerBranch.main;
+  const activeCourseOptions = coursesPerBranch.main;
 
   return (
     <div className="relative w-full max-w-4xl mx-auto bg-slate-900/40 border border-slate-900/60 rounded-3xl p-6 sm:p-8 backdrop-blur-xl shadow-2xl overflow-hidden mt-4 glass-panel gpu-accelerated">
@@ -404,14 +432,15 @@ export default function AdmissionView({
                       setFirstName(selected.firstName || "");
                       setMiddleName(selected.middleName || "");
                       setLastName(selected.lastName || "");
-                      setBranch(selected.branch || "kurla");
                       setCourse(selected.interestedCourse || "");
+                      setEmail(selected.email || "");
                     } else {
                       setFirstName("");
                       setMiddleName("");
                       setLastName("");
-                      setBranch(userProfile?.branch || "main");
+                      // Branch is fixed to Mankhurd (main)
                       setCourse("");
+                      setEmail("");
                     }
                   }}
                   className="flex-1 bg-slate-950/80 border border-slate-850 rounded-xl px-4 py-2 text-sm text-slate-350 focus:outline-none focus:border-teal-500/50 cursor-pointer"
@@ -459,14 +488,14 @@ export default function AdmissionView({
           {/* Student Info */}
           <div className="space-y-4">
             <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest border-l-2 border-teal-500 pl-2">Student Information</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="space-y-1.5">
                 <label className="block text-xs font-semibold text-slate-400">First Name*</label>
                 <input
                   type="text"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
-                  className={`w-full bg-slate-950/80 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-teal-500/50 font-medium ${inquiryData ? 'bg-slate-900 text-slate-400 cursor-not-allowed' : ''}`}
+                  className={`w-full bg-slate-950/80 border border-slate-855 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-teal-500/50 font-medium ${inquiryData ? 'bg-slate-900 text-slate-400 cursor-not-allowed' : ''}`}
                   readOnly={!!inquiryData}
                   required
                 />
@@ -490,6 +519,17 @@ export default function AdmissionView({
                   className={`w-full bg-slate-950/80 border border-slate-855 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-teal-500/50 font-medium ${inquiryData ? 'bg-slate-900 text-slate-400 cursor-not-allowed' : ''}`}
                   readOnly={!!inquiryData}
                   required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-slate-400">Email Address</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className={`w-full bg-slate-950/80 border border-slate-855 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-teal-500/50 font-medium ${inquiryData ? 'bg-slate-900 text-slate-400 cursor-not-allowed' : ''}`}
+                  readOnly={!!inquiryData}
+                  placeholder="student@example.com"
                 />
               </div>
             </div>
@@ -533,26 +573,13 @@ export default function AdmissionView({
             <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest border-l-2 border-teal-500 pl-2">Course Information</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label htmlFor="branch_select" className="block text-xs font-semibold text-slate-400">Branch*</label>
-                <select
-                  id="branch_select"
-                  value={branch}
-                  onChange={(e) => {
-                    setBranch(e.target.value);
-                    setCourse(""); // reset course when branch changes
-                  }}
-                  className={`w-full bg-slate-950/80 border border-slate-855 rounded-xl px-4 py-2.5 text-sm text-slate-350 focus:outline-none focus:border-teal-500/50 font-medium cursor-pointer ${inquiryData ? 'bg-slate-900 text-slate-400 cursor-not-allowed' : ''}`}
-                  disabled={!!inquiryData}
-                  required
-                >
-                  <option value="main">Main</option>
-                  <option value="karad">Karad</option>
-                  <option value="nalasapora">Nalasapora</option>
-                  <option value="thane">Thane</option>
-                  {branch && !["main", "karad", "nalasapora", "thane"].includes(branch.toLowerCase()) && (
-                    <option value={branch} className="capitalize">{branch.replace(/_/g, " ")}</option>
-                  )}
-                </select>
+                <label className="block text-xs font-semibold text-slate-400">Branch*</label>
+                <input
+                  type="text"
+                  value={branch === "main" ? "Mankhurd (Main)" : branch.charAt(0).toUpperCase() + branch.slice(1)}
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-400 cursor-not-allowed font-semibold"
+                  readOnly
+                />
               </div>
 
               <div className="space-y-1.5">

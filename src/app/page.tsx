@@ -280,13 +280,18 @@ export default function Home() {
 
           {/* Mobile responsive navigation header */}
           <header className="md:hidden flex items-center justify-between px-6 py-4 bg-slate-950/80 border-b border-slate-900 sticky top-0 z-20 backdrop-blur-md">
-            <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-tr from-teal-400 to-indigo-500 shadow-md">
-                <svg className="h-5 w-5 text-slate-950" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944" />
-                </svg>
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white overflow-hidden shrink-0">
+                <img
+                  src="/TrustCareLogo.avif"
+                  alt="TrustCare Logo"
+                  className="h-7 w-7 object-contain"
+                />
               </div>
-              <span className="font-extrabold text-sm tracking-tight bg-gradient-to-r from-teal-600 to-indigo-600 bg-clip-text text-transparent">TrustCare</span>
+              <div className="flex flex-col leading-tight">
+                <span className="font-extrabold text-xs tracking-tight text-slate-100">TRUSTCARE</span>
+                <span className="text-[8px] text-slate-500 tracking-wider font-semibold">INSTITUTE OF HEALTH & SCIENCE</span>
+              </div>
             </div>
 
             <button
@@ -448,14 +453,16 @@ export default function Home() {
         {/* Logo and Titles */}
         <div className="text-center pb-4 mb-6 border-b border-slate-800/60">
           <div className="flex justify-center mb-3">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-teal-400 to-indigo-500 shadow-lg shadow-teal-500/20">
-              <svg className="h-8 w-8 text-slate-950" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9" />
-              </svg>
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white shadow-lg overflow-hidden">
+              <img
+                src="/TrustCareLogo.avif"
+                alt="TrustCare Logo"
+                className="h-14 w-14 object-contain"
+              />
             </div>
           </div>
-          <h2 className="text-xl font-black tracking-wider text-slate-100 uppercase">
-            TRUSTCARE
+          <h2 className="text-lg font-black tracking-tight text-slate-100 leading-tight">
+            TRUSTCARE INSTITUTE OF<br />HEALTH & SCIENCE
           </h2>
           <p className="text-[11px] text-slate-500 mt-1 uppercase tracking-widest font-semibold">TrustCare Portal Access</p>
         </div>
@@ -478,7 +485,7 @@ export default function Home() {
                 id="username"
                 value={usernameInput}
                 onChange={(e) => setUsernameInput(e.target.value)}
-                placeholder="e.g. admin or kurla_staff"
+                placeholder="e.g. admin or staff"
                 className="w-full bg-slate-950/80 border border-slate-850 focus:border-teal-500/50 rounded-xl pl-10 pr-4 py-2.5 text-sm text-slate-100 placeholder-slate-700 focus:outline-none transition-colors"
                 required
               />

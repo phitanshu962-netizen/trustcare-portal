@@ -371,11 +371,11 @@ export function openInstallmentReceipt(params: {
             <span class="field-label">Purpose To Pay :</span>
             <span style="display: inline-flex; align-items: center; margin-right: 15px;">
               Admission Fee's
-              <span class="checkbox-box">${(params.isAdmission || params.installmentNumber === 1) ? '✓' : '&nbsp;'}</span>
+              <span class="checkbox-box">${params.isAdmission ? '✓' : '&nbsp;'}</span>
             </span>
             <span style="display: inline-flex; align-items: center; margin-right: 15px;">
               Course Fee's
-              <span class="checkbox-box">${(!params.isAdmission && params.installmentNumber > 1) ? '✓' : '&nbsp;'}</span>
+              <span class="checkbox-box">${!params.isAdmission ? '✓' : '&nbsp;'}</span>
             </span>
             <span style="display: inline-flex; align-items: center;">
               Exam Fee's
@@ -470,11 +470,11 @@ export function openInstallmentReceipt(params: {
             <span class="field-label">Purpose To Pay :</span>
             <span style="display: inline-flex; align-items: center; margin-right: 15px;">
               Admission Fee's
-              <span class="checkbox-box">${(params.isAdmission || params.installmentNumber === 1) ? '✓' : '&nbsp;'}</span>
+              <span class="checkbox-box">${params.isAdmission ? '✓' : '&nbsp;'}</span>
             </span>
             <span style="display: inline-flex; align-items: center; margin-right: 15px;">
               Course Fee's
-              <span class="checkbox-box">${(!params.isAdmission && params.installmentNumber > 1) ? '✓' : '&nbsp;'}</span>
+              <span class="checkbox-box">${!params.isAdmission ? '✓' : '&nbsp;'}</span>
             </span>
             <span style="display: inline-flex; align-items: center;">
               Exam Fee's

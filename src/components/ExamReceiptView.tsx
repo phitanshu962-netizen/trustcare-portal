@@ -50,6 +50,9 @@ export default function ExamReceiptView({ userProfile, onGoBack }: ExamReceiptVi
   const [totalAmount, setTotalAmount] = useState(500);
   const [paymentMode, setPaymentMode] = useState("");
   const [agreeTerms, setAgreeTerms] = useState(false);
+  const [studentEmail, setStudentEmail] = useState("");
+  const [lastReceipt, setLastReceipt] = useState<any | null>(null);
+  const [emailSending, setEmailSending] = useState(false);
 
   const [notification, setNotification] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
 
@@ -94,6 +97,7 @@ export default function ExamReceiptView({ userProfile, onGoBack }: ExamReceiptVi
       if (res.success) {
         setStudentName(res.studentName || "");
         setCourseName(res.courseName || "");
+        setStudentEmail(res.email || "");
 
         const studentBranch = res.branch || userProfile?.branch || "kurla";
         setBranch(studentBranch);
@@ -106,6 +110,7 @@ export default function ExamReceiptView({ userProfile, onGoBack }: ExamReceiptVi
         showNotification("Enrollment ID not found or invalid", "error");
         setStudentName("");
         setCourseName("");
+        setStudentEmail("");
         setTotalAmount(500);
       }
     } catch (error) {
@@ -595,6 +600,48 @@ export default function ExamReceiptView({ userProfile, onGoBack }: ExamReceiptVi
     }
   };
 
+  const handleSendExamEmail = async (receipt: any) => {
+    if (!studentEmail && !receipt.email) {
+      showNotification("Please enter a valid email address.", "error");
+      return;
+    }
+
+    const emailToUse = studentEmail || receipt.email;
+    setEmailSending(true);
+    showNotification("Sending email...", "info");
+    try {
+      const response = await fetch("/api/send-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: emailToUse,
+          type: "exam",
+          data: {
+            receiptNo: receipt.receiptNumber,
+            date: receipt.receiptDate,
+            studentName: receipt.studentName,
+            courseName: receipt.courseName,
+            totalAmount: receipt.totalAmount,
+            paymentMode: receipt.paymentMode,
+            receivedBy: receipt.userId,
+            branch: branch.toUpperCase() || "KURLA"
+          }
+        })
+      });
+
+      const res = await response.json();
+      if (response.ok) {
+        showNotification(`Exam receipt email sent to ${emailToUse} successfully!`, "success");
+      } else {
+        showNotification(res.error || "Failed to send email.", "error");
+      }
+    } catch (err: any) {
+      showNotification("Error sending email: " + err.message, "error");
+    } finally {
+      setEmailSending(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -613,7 +660,7 @@ export default function ExamReceiptView({ userProfile, onGoBack }: ExamReceiptVi
 
     setSubmitting(true);
     try {
-      const receiptData: ExamReceiptData = {
+      const receiptData: ExamReceiptData & { email?: string } = {
         receiptDate,
         receiptNumber,
         enrollmentId,
@@ -622,15 +669,43 @@ export default function ExamReceiptView({ userProfile, onGoBack }: ExamReceiptVi
         totalAmount,
         paymentMode,
         agreeTerms: agreeTerms ? "Agreed" : "Not Agreed",
-        userId: userProfile?.username || "Admin"
+        userId: userProfile?.username || "Admin",
+        email: studentEmail
       };
 
       const res = await saveExamReceipt(receiptData);
       if (res.success) {
         showNotification("Exam fee receipt saved successfully! Printing...", "success");
+        setLastReceipt(receiptData);
 
         // Print the receipt double layout
         printReceipt(receiptNumber, receiptDate, studentName, courseName, totalAmount, paymentMode, branch);
+
+        // Auto-send exam email if student email is available
+        if (studentEmail) {
+          try {
+            await fetch("/api/send-email", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                to: studentEmail,
+                type: "exam",
+                data: {
+                  receiptNo: receiptNumber,
+                  date: receiptDate,
+                  studentName: studentName,
+                  courseName: courseName,
+                  totalAmount: totalAmount,
+                  paymentMode: paymentMode,
+                  receivedBy: userProfile?.username || "Admin",
+                  branch: branch.toUpperCase()
+                }
+              })
+            });
+          } catch (mailErr) {
+            console.warn("Could not auto-send exam email:", mailErr);
+          }
+        }
 
         // Reset form except date
         setEnrollmentId("");
@@ -639,6 +714,7 @@ export default function ExamReceiptView({ userProfile, onGoBack }: ExamReceiptVi
         setPaymentMode("");
         setAgreeTerms(false);
         setBranch("");
+        setStudentEmail("");
 
         // Load next receipt number
         const nextReceipt = await getNextReceiptNumberEF();
@@ -759,7 +835,19 @@ export default function ExamReceiptView({ userProfile, onGoBack }: ExamReceiptVi
               />
             </div>
           </div>
-
+          {studentName && (
+            <div className="space-y-1.5 animate-slide-up">
+              <label htmlFor="studentEmail" className="block text-xs font-semibold text-slate-400">Email Address</label>
+              <input
+                type="email"
+                id="studentEmail"
+                value={studentEmail}
+                onChange={(e) => setStudentEmail(e.target.value)}
+                placeholder="student@example.com"
+                className="w-full bg-slate-950/80 border border-slate-850 focus:border-teal-500/50 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-700 focus:outline-none transition-colors font-medium"
+              />
+            </div>
+          )}
           {/* Amount & Payment Mode */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1.5">
@@ -807,6 +895,33 @@ export default function ExamReceiptView({ userProfile, onGoBack }: ExamReceiptVi
               </span>
             </label>
           </div>
+
+          {lastReceipt && (
+            <div className="p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-slide-up my-4">
+              <div>
+                <p className="text-xs font-bold text-slate-350">Last Receipt Generated: {lastReceipt.receiptNumber}</p>
+                <p className="text-[10px] text-slate-500">Registered Student: {lastReceipt.studentName} ({lastReceipt.email || "No Email"})</p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleSendExamEmail(lastReceipt)}
+                  disabled={emailSending || !lastReceipt.email}
+                  className="px-3.5 py-1.5 bg-teal-500/10 hover:bg-teal-500/20 text-teal-400 text-xs font-bold rounded-lg flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  ✉ Email Receipt
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSendExamEmail(lastReceipt)}
+                  disabled={emailSending || !lastReceipt.email}
+                  className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-bold rounded-lg flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  ↻ Resend Email
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Actions */}
           <div className="border-t border-slate-900 pt-6 mt-6 flex justify-end gap-3">

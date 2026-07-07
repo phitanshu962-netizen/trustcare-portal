@@ -103,6 +103,9 @@ export default function PaymentView({
   const [processingPayment, setProcessingPayment] = useState<number | null>(null);
   const [printReceiptData, setPrintReceiptData] = useState<any | null>(null);
   const [branch, setBranch] = useState(userProfile?.branch || "MAIN");
+  const [studentEmail, setStudentEmail] = useState("");
+  const [emailSentState, setEmailSentState] = useState<{ [key: number]: boolean }>({});
+  const [admissionEmailSent, setAdmissionEmailSent] = useState(false);
 
   useEffect(() => {
     if (initialEnrollmentId) {
@@ -126,6 +129,7 @@ export default function PaymentView({
         const firstDoc = await getStudentDataByEnrollmentId(id);
         if (firstDoc.success) {
           setBranch(firstDoc.branch || userProfile?.branch || "MAIN");
+          setStudentEmail(firstDoc.email || "");
           const hist = await getInstallmentPaymentsForStudent(id);
           if (hist) setPaymentMethod(hist.paymentMethod || "Cash");
         }
@@ -149,6 +153,8 @@ export default function PaymentView({
         setCourseName(res.courseName);
         setReceiptNo(res.receiptNumber || "");
         setBranch(res.branch || "MAIN");
+        setStudentEmail(res.email || "");
+        setAdmissionEmailSent(false);
         if (res.courseDuration) setDbCourseDuration(res.courseDuration);
         if (res.totalCourseFees) setDbTotalFees(res.totalCourseFees);
         if (res.guardianName) setGuardianName(res.guardianName);
@@ -317,10 +323,157 @@ export default function PaymentView({
 
     try {
       const res = await saveInstallmentPayment({ enrollmentId, studentName, courseName, installmentNumber: inst.installmentNumber, installmentAmount: inst.amount, paymentMethod, paymentDate: new Date().toISOString().split("T")[0], loggedInUser: userProfile?.username || "Admin" });
-      if (res.success) { setSuccessMsg(`Installment ${inst.installmentNumber} recorded successfully!`); await checkExistingSchedule(enrollmentId); }
+      if (res.success) {
+        setSuccessMsg(`Installment ${inst.installmentNumber} recorded successfully!`);
+        await checkExistingSchedule(enrollmentId);
+
+        // Auto-send installment email if student email is available
+        if (studentEmail) {
+          try {
+            const updatedSchedule = schedule.map(s => s.installmentNumber === inst.installmentNumber ? { ...s, status: "Paid" as const } : s);
+            const paidUpToNow = updatedSchedule
+              .filter((s) => s.status === "Paid" && s.installmentNumber <= inst.installmentNumber)
+              .reduce((sum, s) => sum + s.amount, 0);
+            const allPaid = updatedSchedule
+              .filter((s) => s.status === "Paid")
+              .reduce((sum, s) => sum + s.amount, 0);
+            const totalPayable = updatedSchedule.reduce((sum, s) => sum + s.amount, 0) || totalFees;
+            const balanceDue = Math.max(0, totalPayable - allPaid);
+
+            await fetch("/api/send-email", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                to: studentEmail,
+                type: "installment",
+                data: {
+                  receiptNo: receiptNo || `IR-${enrollmentId}-${inst.installmentNumber}`,
+                  date: new Date().toLocaleDateString("en-GB"),
+                  studentName: studentName,
+                  courseName: courseName,
+                  installmentNumber: inst.installmentNumber,
+                  amountPaid: inst.amount,
+                  paymentMode: paymentMethod,
+                  receivedBy: userProfile?.username || "Authorized Officer",
+                  branch: branch.toUpperCase(),
+                  totalPaidSoFar: paidUpToNow,
+                  balanceDue: balanceDue,
+                  totalFees: totalPayable,
+                }
+              })
+            });
+            setEmailSentState(prev => ({ ...prev, [inst.installmentNumber]: true }));
+          } catch (mailErr) {
+            console.warn("Could not auto-send installment email:", mailErr);
+          }
+        }
+      }
       else setErrorMsg(res.message || "Failed to record payment.");
     } catch (err: any) { setErrorMsg(err.message || "Error saving payment."); }
     finally { setProcessingPayment(null); }
+  };
+
+  const handleSendAdmissionEmail = async () => {
+    if (!studentEmail) {
+      alert("Please enter a valid student email address.");
+      return;
+    }
+
+    setSuccessMsg("");
+    setErrorMsg("");
+    setLoading(true);
+
+    try {
+      const response = await fetch("/api/send-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: studentEmail,
+          type: "admission",
+          data: {
+            receiptNo: receiptNo,
+            date: new Date().toLocaleDateString("en-GB"),
+            studentName: studentName,
+            courseName: courseName,
+            courseDuration: duration,
+            amountPaid: config.admission_fee,
+            paymentMode: paymentMethod || "Cash",
+            receivedBy: userProfile?.username || "Admin",
+            branch: branch.toUpperCase()
+          }
+        })
+      });
+
+      const res = await response.json();
+      if (response.ok) {
+        setSuccessMsg(`Admission receipt email sent to ${studentEmail} successfully!`);
+        setAdmissionEmailSent(true);
+      } else {
+        setErrorMsg(res.error || "Failed to send admission email.");
+      }
+    } catch (err: any) {
+      setErrorMsg("Error sending email: " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEmailInstallmentReceipt = async (inst: Installment) => {
+    if (!studentEmail) {
+      alert("Please specify a student email address first.");
+      return;
+    }
+
+    const effectiveSchedule = schedule.length > 0 ? schedule : [];
+    const paidUpToNow = effectiveSchedule
+      .filter((s) => s.status === "Paid" && s.installmentNumber <= inst.installmentNumber)
+      .reduce((sum, s) => sum + s.amount, 0);
+    const allPaid = effectiveSchedule
+      .filter((s) => s.status === "Paid")
+      .reduce((sum, s) => sum + s.amount, 0);
+    const totalPayable = effectiveSchedule.reduce((sum, s) => sum + s.amount, 0) || totalFees;
+    const balanceDue = Math.max(0, totalPayable - allPaid);
+
+    setSuccessMsg("");
+    setErrorMsg("");
+    setLoading(true);
+
+    try {
+      const response = await fetch("/api/send-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: studentEmail,
+          type: "installment",
+          data: {
+            receiptNo: receiptNo || `IR-${enrollmentId}-${inst.installmentNumber}`,
+            date: new Date().toLocaleDateString("en-GB"),
+            studentName: studentName,
+            courseName: courseName,
+            installmentNumber: inst.installmentNumber,
+            amountPaid: inst.amount,
+            paymentMode: paymentMethod,
+            receivedBy: userProfile?.username || "Authorized Officer",
+            branch: branch.toUpperCase(),
+            totalPaidSoFar: paidUpToNow,
+            balanceDue: balanceDue,
+            totalFees: totalPayable,
+          }
+        })
+      });
+
+      const res = await response.json();
+      if (response.ok) {
+        setSuccessMsg(`Installment ${inst.installmentNumber} receipt email sent to ${studentEmail} successfully!`);
+        setEmailSentState(prev => ({ ...prev, [inst.installmentNumber]: true }));
+      } else {
+        setErrorMsg(res.error || "Failed to send email.");
+      }
+    } catch (err: any) {
+      setErrorMsg("Error sending email: " + err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Generate receipt using appscript-style installment receipt format
@@ -426,6 +579,30 @@ export default function PaymentView({
             readOnly
           />
         </div>
+        {studentName && (
+          <div className="md:col-span-4 border-t border-slate-900/60 pt-4 mt-2 grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+            <div className="md:col-span-2 space-y-1.5">
+              <label className="block text-xs font-semibold text-slate-400">Student Email Address</label>
+              <input
+                type="email"
+                value={studentEmail}
+                onChange={(e) => setStudentEmail(e.target.value)}
+                className="w-full bg-slate-950/80 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-700 focus:outline-none focus:border-teal-500/50 font-medium"
+                placeholder="student@example.com (No email on record)"
+              />
+            </div>
+            <div className="md:col-span-2 flex gap-2 w-full">
+              <button
+                type="button"
+                onClick={handleSendAdmissionEmail}
+                disabled={loading || !studentEmail}
+                className="px-4 py-2 bg-gradient-to-r from-teal-500/10 to-indigo-500/10 border border-teal-500/25 text-teal-400 hover:opacity-90 active:scale-95 transition-all text-xs rounded-xl cursor-pointer hover-lift flex-1 flex items-center justify-center gap-1.5 uppercase font-bold tracking-wider disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                ✉ {admissionEmailSent ? "Resend Admission Email" : "Email Admission Receipt"}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div className="bg-slate-900/20 border border-slate-900 p-4 rounded-2xl flex flex-col justify-center">
@@ -637,12 +814,21 @@ export default function PaymentView({
                     </td>
                     <td className="px-5 py-3 text-center">
                       {inst.status === "Paid" ? (
-                        <button
-                          onClick={() => handlePrintReceipt(inst)}
-                          className="px-2.5 py-1 text-[10px] font-bold text-slate-950 bg-emerald-450 hover:bg-emerald-350 transition-colors rounded-lg flex items-center justify-center gap-1 mx-auto shadow shadow-emerald-500/10 cursor-pointer hover-lift"
-                        >
-                          <Printer className="h-3.5 w-3.5 text-slate-950" />Receipt
-                        </button>
+                        <div className="flex flex-col sm:flex-row gap-1.5 justify-center">
+                          <button
+                            onClick={() => handlePrintReceipt(inst)}
+                            className="px-2 py-1 text-[9px] font-bold text-white bg-emerald-500 hover:bg-emerald-500/80 transition-colors rounded-lg flex items-center justify-center gap-1 shadow shadow-emerald-500/10 cursor-pointer hover-lift"
+                          >
+                            <Printer className="h-3 w-3 text-white" />Print
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleEmailInstallmentReceipt(inst)}
+                            className="px-2 py-1 text-[9px] font-bold text-white bg-teal-500 hover:bg-teal-500/80 transition-colors rounded-lg flex items-center justify-center gap-1 cursor-pointer hover-lift"
+                          >
+                            ✉ {emailSentState[inst.installmentNumber] ? "Resend" : "Email"}
+                          </button>
+                        </div>
                       ) : (
                         <span className="text-slate-650">-</span>
                       )}

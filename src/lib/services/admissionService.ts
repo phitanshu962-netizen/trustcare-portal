@@ -35,6 +35,7 @@ export interface AdmissionData {
   date: string;
   timestamp?: any;
   branch: string;
+  email?: string;
 }
 
 // Generate the next receipt number (e.g. AR-0001, AR-0024)

@@ -41,8 +41,6 @@ export default function Sidebar({
 
   const navItems = [
     { id: "inquiry", label: "New Inquiry", icon: FileText },
-    { id: "admission", label: "New Admission", icon: UserPlus },
-    { id: "payment", label: "Course Payment", icon: CircleDollarSign },
     { id: "exam-receipt", label: "Exam Receipt", icon: Receipt }
   ];
 
@@ -67,9 +65,14 @@ export default function Sidebar({
             <img src="/TrustCareLogo.avif" alt="TrustCare Logo" className="w-full h-full object-contain" />
           </div>
         </div>
-        <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-teal-600 to-indigo-600 bg-clip-text text-transparent">
-          TrustCare
-        </span>
+        <div className="text-center leading-tight">
+          <span className="text-sm font-black tracking-tight text-slate-100 block">
+            TRUSTCARE
+          </span>
+          <span className="text-[9px] text-slate-400 tracking-wider font-semibold block mt-0.5">
+            INSTITUTE OF HEALTH SCIENCE
+          </span>
+        </div>
         <div className="mt-3 flex flex-col items-center gap-1">
           <p className="text-[10px] text-slate-400 uppercase tracking-widest font-semibold">
             {userProfile?.username || "Guest User"}

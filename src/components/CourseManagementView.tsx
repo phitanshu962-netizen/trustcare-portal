@@ -208,7 +208,7 @@ export default function CourseManagementView({ userProfile }: CourseManagementVi
             <div className="absolute bottom-0 left-0 -z-10 h-32 w-32 bg-indigo-500/10 blur-2xl rounded-full" />
 
             <div className="border-b border-slate-900 pb-4 mb-6 text-center">
-                <h1 className="text-2xl sm:text-3xl font-extrabold bg-gradient-to-r from-teal-200 to-indigo-200 bg-clip-text text-transparent flex items-center justify-center gap-3">
+                <h1 className="text-2xl sm:text-3xl font-extrabold bg-gradient-to-r from-teal-600 to-indigo-600 bg-clip-text text-transparent flex items-center justify-center gap-3">
                     <i className="fas fa-graduation-cap text-teal-400"></i>COURSE MANAGEMENT
                 </h1>
                 <p className="text-xs text-slate-500 mt-1">Add, edit, and manage courses with pricing & duration</p>
