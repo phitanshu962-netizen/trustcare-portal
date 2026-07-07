@@ -248,7 +248,7 @@ export default function ExamReceiptView({ userProfile, onGoBack }: ExamReceiptVi
     .org-name {
       font-size: 36px;
       font-weight: 900;
-      color: #000;
+      color: #006400;
       font-family: 'Times New Roman', Times, serif;
       letter-spacing: 1.5px;
       margin: 0;
@@ -396,7 +396,7 @@ export default function ExamReceiptView({ userProfile, onGoBack }: ExamReceiptVi
         </div>
         <div class="receipt-content">
           <div class="field-row">
-            <div style="display: flex; flex: 1; align-items: flex-end;">
+            <div style="display: flex; width: 250px; align-items: flex-end;">
               <span class="field-label">Receipt No.</span>
               <span class="field-underline">${receiptNo}</span>
             </div>
@@ -447,7 +447,7 @@ export default function ExamReceiptView({ userProfile, onGoBack }: ExamReceiptVi
             </div>
           </div>
 
-          <div class="field-row">
+          <div class="field-row" style="width: 350px;">
             <span class="field-label">Received By :</span>
             <span class="field-underline">${userProfile?.username || "Admin"}</span>
           </div>
@@ -495,7 +495,7 @@ export default function ExamReceiptView({ userProfile, onGoBack }: ExamReceiptVi
         </div>
         <div class="receipt-content">
           <div class="field-row">
-            <div style="display: flex; flex: 1; align-items: flex-end;">
+            <div style="display: flex; width: 250px; align-items: flex-end;">
               <span class="field-label">Receipt No.</span>
               <span class="field-underline">${receiptNo}</span>
             </div>
@@ -546,7 +546,7 @@ export default function ExamReceiptView({ userProfile, onGoBack }: ExamReceiptVi
             </div>
           </div>
 
-          <div class="field-row">
+          <div class="field-row" style="width: 350px;">
             <span class="field-label">Received By :</span>
             <span class="field-underline">${userProfile?.username || "Admin"}</span>
           </div>
@@ -758,7 +758,6 @@ export default function ExamReceiptView({ userProfile, onGoBack }: ExamReceiptVi
         <h1 className="text-2xl sm:text-3xl font-extrabold bg-gradient-to-r from-teal-600 to-indigo-600 bg-clip-text text-transparent flex items-center justify-center gap-3">
           <Receipt className="h-7 w-7 text-teal-400" />EXAM FEE RECEIPT
         </h1>
-        <p className="text-xs text-slate-500 mt-1 uppercase tracking-widest font-semibold">Record exam fee payments and generate receipts</p>
       </div>
 
       {loading ? (

@@ -192,7 +192,8 @@ export default function InquiryView({ userProfile, onTakeAdmission }: InquiryVie
         <h1 className="text-2xl sm:text-3xl font-extrabold bg-gradient-to-r from-teal-600 to-indigo-600 bg-clip-text text-transparent flex items-center justify-center gap-3">
           <FileText className="h-7 w-7 text-teal-400" />INQUIRY FORM
         </h1>
-        <p className="text-xs text-slate-500 mt-1 uppercase tracking-widest font-semibold">Submit trainee inquiries or lookup existing records via Aadhar</p>
+
+        
       </div>
 
       {/* Status Messages */}
@@ -348,7 +349,55 @@ export default function InquiryView({ userProfile, onTakeAdmission }: InquiryVie
               </select>
             </div>
           </div>
-        </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+            <div className="space-y-1.5">
+              <label htmlFor="interestedCourse" className="block text-xs font-semibold text-slate-400">Select Course*</label>
+              <select
+                id="interestedCourse"
+                name="interestedCourse"
+                value={formData.interestedCourse}
+                onChange={handleInputChange}
+                className="w-full bg-slate-950/80 border border-slate-855 rounded-xl px-4 py-2.5 text-sm text-slate-300 focus:outline-none focus:border-teal-500/50 transition-colors font-medium cursor-pointer"
+                required
+              >
+                <option value="">Select Course</option>
+                {courseList.length === 0 ? (
+                  <option value="" disabled>No courses available for this branch</option>
+                ) : (
+                  courseList.map((course) => (
+                    <option key={course.id} value={course.courseId}>
+                      {course.courseName} ({course.duration})
+                    </option>
+                  ))
+                )}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <label htmlFor="inquiryTakenBy" className="block text-xs font-semibold text-slate-400">Inquiry Taken By</label>
+              <input
+                type="text"
+                id="inquiryTakenBy"
+                name="inquiryTakenBy"
+                value={formData.inquiryTakenBy}
+                onChange={handleInputChange}
+                className="w-full bg-slate-950/80 border border-slate-855 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-teal-500/50 transition-colors font-medium"
+                required
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label htmlFor="branch" className="block text-xs font-semibold text-slate-400">Branch</label>
+              <input
+                type="text"
+                id="branch"
+                name="branch"
+                value={formData.branch}
+                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-400 cursor-not-allowed capitalize font-semibold"
+                readOnly
+              />
+            </div>
+          </div>
 
         {/* Contact Info Section */}
         <div className="space-y-4">
@@ -465,58 +514,7 @@ export default function InquiryView({ userProfile, onTakeAdmission }: InquiryVie
           </div>
         </div>
 
-        {/* Course & Metadata Section */}
-        <div className="space-y-4">
-          <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest border-l-2 border-teal-500 pl-2 mb-3">Course Selection & Details</h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-1.5">
-              <label htmlFor="interestedCourse" className="block text-xs font-semibold text-slate-400">Select Course*</label>
-              <select
-                id="interestedCourse"
-                name="interestedCourse"
-                value={formData.interestedCourse}
-                onChange={handleInputChange}
-                className="w-full bg-slate-950/80 border border-slate-855 rounded-xl px-4 py-2.5 text-sm text-slate-300 focus:outline-none focus:border-teal-500/50 transition-colors font-medium cursor-pointer"
-                required
-              >
-                <option value="">Select Course</option>
-                {courseList.length === 0 ? (
-                  <option value="" disabled>No courses available for this branch</option>
-                ) : (
-                  courseList.map((course) => (
-                    <option key={course.id} value={course.courseId}>
-                      {course.courseName} ({course.duration} - ₹{course.fees.toLocaleString()})
-                    </option>
-                  ))
-                )}
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <label htmlFor="inquiryTakenBy" className="block text-xs font-semibold text-slate-400">Inquiry Taken By</label>
-              <input
-                type="text"
-                id="inquiryTakenBy"
-                name="inquiryTakenBy"
-                value={formData.inquiryTakenBy}
-                onChange={handleInputChange}
-                className="w-full bg-slate-950/80 border border-slate-855 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-teal-500/50 transition-colors font-medium"
-                required
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label htmlFor="branch" className="block text-xs font-semibold text-slate-400">Branch</label>
-              <input
-                type="text"
-                id="branch"
-                name="branch"
-                value={formData.branch}
-                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-400 cursor-not-allowed capitalize font-semibold"
-                readOnly
-              />
-            </div>
-          </div>
-        </div>
 
         {/* Footer Actions */}
         <div className="border-t border-slate-900 pt-6 mt-8 flex flex-col sm:flex-row items-center justify-between gap-4">

@@ -199,7 +199,7 @@ export function openInstallmentReceipt(params: {
     .org-name {
       font-size: 36px;
       font-weight: 900;
-      color: #000;
+      color: #006400;
       font-family: 'Times New Roman', Times, serif;
       letter-spacing: 1.5px;
       margin: 0;
@@ -340,14 +340,14 @@ export function openInstallmentReceipt(params: {
           <div class="header-center">
             <div class="org-name">TRUSTCARE</div>
             <div class="org-sub">INSTITUTE OF HEALTH SCIENCE</div>
-            <div class="receipt-badge">${params.isAdmission ? 'ADMISSION RECEIPT' : 'RECEIPT'}</div>
+            <div class="receipt-badge">${params.isAdmission ? 'ADMISSION RECEIPT' : 'FEE RECEIPT'}</div>
             <div class="receipt-type">STUDENT COPY</div>
           </div>
           <div class="logo-container"><img class="logo-img" src="${logoBase64}" alt="Logo" /></div>
         </div>
         <div class="receipt-content">
           <div class="field-row">
-            <div style="display: flex; flex: 1; align-items: flex-end;">
+            <div style="display: flex; width: 250px; align-items: flex-end;">
               <span class="field-label">Receipt No.</span>
               <span class="field-underline">${params.receiptNo}</span>
             </div>
@@ -398,7 +398,7 @@ export function openInstallmentReceipt(params: {
             </div>
           </div>
 
-          <div class="field-row">
+          <div class="field-row" style="width: 350px;">
             <span class="field-label">Received By :</span>
             <span class="field-underline">${params.receivedBy}</span>
           </div>
@@ -439,14 +439,14 @@ export function openInstallmentReceipt(params: {
           <div class="header-center">
             <div class="org-name">TRUSTCARE</div>
             <div class="org-sub">INSTITUTE OF HEALTH SCIENCE</div>
-            <div class="receipt-badge">${params.isAdmission ? 'ADMISSION RECEIPT' : 'RECEIPT'}</div>
+            <div class="receipt-badge">${params.isAdmission ? 'ADMISSION RECEIPT' : 'FEE RECEIPT'}</div>
             <div class="receipt-type">CENTRE COPY</div>
           </div>
           <div class="logo-container"><img class="logo-img" src="${logoBase64}" alt="Logo" /></div>
         </div>
         <div class="receipt-content">
           <div class="field-row">
-            <div style="display: flex; flex: 1; align-items: flex-end;">
+            <div style="display: flex; width: 250px; align-items: flex-end;">
               <span class="field-label">Receipt No.</span>
               <span class="field-underline">${params.receiptNo}</span>
             </div>
@@ -497,7 +497,7 @@ export function openInstallmentReceipt(params: {
             </div>
           </div>
 
-          <div class="field-row">
+          <div class="field-row" style="width: 350px;">
             <span class="field-label">Received By :</span>
             <span class="field-underline">${params.receivedBy}</span>
           </div>
@@ -795,7 +795,7 @@ export function openCoursePaymentReceipt(data: ReceiptData) {
       <img src="${logoBase64}" alt="Logo" style="width:126px;height:126px;object-fit:cover;flex-shrink:0;" />
       <div style="flex-grow:1;">
         <div style="color:#0b5175;font-size:23px;font-weight:900;letter-spacing:0.3px;line-height:1.2;font-family:'Times New Roman', Times, serif;">TRUSTCARE INSTITUTE OF HEALTH SCIENCE</div>
-        <div style="font-weight:700;font-size:11.5px;color:#000;margin-top:5px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+        <div style="font-weight:700;font-size:14px;color:#000;margin-top:5px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
           <span>Email: trustcareinstitute03@gmail.com</span>
           <span style="color:#555;">|</span>
           <span style="display:flex;align-items:center;gap:4px;">
@@ -806,6 +806,9 @@ export function openCoursePaymentReceipt(data: ReceiptData) {
             <span style="background-color:#d32f2f;color:white;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:11px;">&#9742;</span> +91 9967288158
           </span>
         </div>
+      </div>
+      <div style="width:100px;height:120px;border:1.5px solid #000;display:flex;align-items:center;justify-content:center;font-size:11px;text-align:center;color:#333;font-weight:700;flex-shrink:0;margin-left:auto;">
+        Passport<br/>Size<br/>Photo
       </div>
     </div>
 
