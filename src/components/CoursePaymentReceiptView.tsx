@@ -15,6 +15,7 @@ interface ReceiptData {
   admissionFee?: number;
   guardianName?: string;
   guardianRelation?: string;
+  photoUrl?: string;
 }
 
 const mrPoints = [
@@ -199,7 +200,7 @@ export function openInstallmentReceipt(params: {
     .org-name {
       font-size: 36px;
       font-weight: 900;
-      color: #006400;
+      color: #013220;
       font-family: 'Times New Roman', Times, serif;
       letter-spacing: 1.5px;
       margin: 0;
@@ -207,7 +208,7 @@ export function openInstallmentReceipt(params: {
     .org-sub {
       font-size: 16px;
       font-weight: bold;
-      color: #000;
+      color: #013220;
       letter-spacing: 0.5px;
       margin: 2px 0 0 0;
     }
@@ -794,7 +795,7 @@ export function openCoursePaymentReceipt(data: ReceiptData) {
     <div style="display:flex;align-items:center;gap:14px;padding-bottom:12px;margin-bottom:6px;position:relative;z-index:2;">
       <img src="${logoBase64}" alt="Logo" style="width:126px;height:126px;object-fit:cover;flex-shrink:0;" />
       <div style="flex-grow:1;">
-        <div style="color:#0b5175;font-size:23px;font-weight:900;letter-spacing:0.3px;line-height:1.2;font-family:'Times New Roman', Times, serif;">TRUSTCARE INSTITUTE OF HEALTH SCIENCE</div>
+        <div style="color:#013220;font-size:23px;font-weight:900;letter-spacing:0.3px;line-height:1.2;font-family:'Times New Roman', Times, serif;">TRUSTCARE INSTITUTE OF HEALTH SCIENCE</div>
         <div style="font-weight:700;font-size:14px;color:#000;margin-top:5px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
           <span>Email: trustcareinstitute03@gmail.com</span>
           <span style="color:#555;">|</span>
@@ -807,9 +808,14 @@ export function openCoursePaymentReceipt(data: ReceiptData) {
           </span>
         </div>
       </div>
-      <div style="width:100px;height:120px;border:1.5px solid #000;display:flex;align-items:center;justify-content:center;font-size:11px;text-align:center;color:#333;font-weight:700;flex-shrink:0;margin-left:auto;">
-        Passport<br/>Size<br/>Photo
+      ${data.photoUrl ? `
+      <div style="width:100px;height:120px;border:1.5px solid #000;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;margin-left:auto;">
+        <img src="${data.photoUrl}" alt="Student Photo" style="width:100%;height:100%;object-fit:cover;" />
       </div>
+      ` : `
+      <div style="width:100px;height:120px;border:1.5px solid #000;flex-shrink:0;margin-left:auto;">
+      </div>
+      `}
     </div>
 
     <!-- Address -->
@@ -917,7 +923,7 @@ export function openCoursePaymentReceipt(data: ReceiptData) {
     <div style="display:flex;align-items:center;gap:14px;padding-bottom:12px;margin-bottom:6px;position:relative;z-index:2;">
       <img src="${logoBase64}" alt="Logo" style="width:126px;height:126px;object-fit:cover;flex-shrink:0;" />
       <div style="flex-grow:1;">
-        <div style="color:#0b5175;font-size:23px;font-weight:900;letter-spacing:0.3px;line-height:1.2;font-family:'Times New Roman', Times, serif;">TRUSTCARE INSTITUTE OF HEALTH SCIENCE</div>
+        <div style="color:#013220;font-size:23px;font-weight:900;letter-spacing:0.3px;line-height:1.2;font-family:'Times New Roman', Times, serif;">TRUSTCARE INSTITUTE OF HEALTH SCIENCE</div>
         <div style="font-weight:700;font-size:11.5px;color:#000;margin-top:5px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
           <span>Email: trustcareinstitute03@gmail.com</span>
           <span style="color:#555;">|</span>

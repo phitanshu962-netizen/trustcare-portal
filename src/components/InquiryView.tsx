@@ -215,7 +215,7 @@ export default function InquiryView({ userProfile, onTakeAdmission }: InquiryVie
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Personal Details Section */}
         <div className="space-y-4">
-          <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest border-l-2 border-teal-500 pl-2 mb-3">Personal Information</h2>
+          <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Personal Information</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Aadhar Number */}
@@ -401,7 +401,7 @@ export default function InquiryView({ userProfile, onTakeAdmission }: InquiryVie
 
         {/* Contact Info Section */}
         <div className="space-y-4">
-          <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest border-l-2 border-teal-500 pl-2 mb-3">Contact Information</h2>
+          <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Contact Information</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-1.5">
@@ -461,7 +461,7 @@ export default function InquiryView({ userProfile, onTakeAdmission }: InquiryVie
 
         {/* Address Section */}
         <div className="space-y-4">
-          <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest border-l-2 border-teal-500 pl-2 mb-3">Address Information</h2>
+          <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Address Information</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1.5">

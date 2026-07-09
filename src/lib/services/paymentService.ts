@@ -92,7 +92,8 @@ export async function getStudentDataByEnrollmentId(enrollmentId: string) {
         admissionFee: data.admissionFee || 0,
         guardianName: data.guardianName || "",
         guardianRelation: data.guardianRelation || "",
-        email: data.email || ""
+        email: data.email || "",
+        photoUrl: data.photoUrl || ""
       };
     }
 

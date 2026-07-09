@@ -248,7 +248,7 @@ export default function ExamReceiptView({ userProfile, onGoBack }: ExamReceiptVi
     .org-name {
       font-size: 36px;
       font-weight: 900;
-      color: #006400;
+      color: #013220;
       font-family: 'Times New Roman', Times, serif;
       letter-spacing: 1.5px;
       margin: 0;
@@ -256,7 +256,7 @@ export default function ExamReceiptView({ userProfile, onGoBack }: ExamReceiptVi
     .org-sub {
       font-size: 16px;
       font-weight: bold;
-      color: #000;
+      color: #013220;
       letter-spacing: 0.5px;
       margin: 2px 0 0 0;
     }

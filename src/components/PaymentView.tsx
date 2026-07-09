@@ -81,6 +81,7 @@ export default function PaymentView({
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+  const [photoUrl, setPhotoUrl] = useState("");
 
   const config = DEFAULT_COURSE_CONFIG[courseName] || { duration: "1 year", fees: 30000, admission_fee: 5000 };
 
@@ -130,6 +131,7 @@ export default function PaymentView({
         if (firstDoc.success) {
           setBranch(firstDoc.branch || userProfile?.branch || "MAIN");
           setStudentEmail(firstDoc.email || "");
+          setPhotoUrl(firstDoc.photoUrl || "");
           const hist = await getInstallmentPaymentsForStudent(id);
           if (hist) setPaymentMethod(hist.paymentMethod || "Cash");
         }
@@ -154,6 +156,7 @@ export default function PaymentView({
         setReceiptNo(res.receiptNumber || "");
         setBranch(res.branch || "MAIN");
         setStudentEmail(res.email || "");
+        setPhotoUrl(res.photoUrl || "");
         setAdmissionEmailSent(false);
         if (res.courseDuration) setDbCourseDuration(res.courseDuration);
         if (res.totalCourseFees) setDbTotalFees(res.totalCourseFees);
@@ -622,7 +625,7 @@ export default function PaymentView({
       </div>
       {/* Payment Options - simplified but keep same structure */}
       <div className="space-y-4">
-        <h3 className="text-xs font-bold text-slate-450 uppercase tracking-widest border-l-2 border-teal-500 pl-2">Select Payment Plan</h3>
+        <h3 className="text-xs font-bold text-slate-450 uppercase tracking-widest">Select Payment Plan</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {(!locked || paymentType === "full") && (
             <div onClick={() => !locked && setPaymentType("full")}
@@ -774,7 +777,7 @@ export default function PaymentView({
       {paymentType && activeSchedule.length > 0 && (
         <div className="mt-8 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <h3 className="text-xs font-bold text-slate-450 uppercase tracking-widest border-l-2 border-teal-500 pl-2">Installment Schedule</h3>
+            <h3 className="text-xs font-bold text-slate-450 uppercase tracking-widest">Installment Schedule</h3>
             {!confirmed && (
               <span className="px-3 py-1 bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-semibold rounded-xl flex items-center gap-1.5 w-fit">
                 <Info className="h-3.5 w-3.5" /> Preview Mode (Confirm plan below to enable payment processing)
@@ -866,6 +869,7 @@ export default function PaymentView({
                 admissionFee: config.admission_fee ?? 5000,
                 guardianName,
                 guardianRelation,
+                photoUrl,
               });
               onProceedToReceipt(receiptNo, enrollmentId);
             }}
@@ -894,7 +898,7 @@ export default function PaymentView({
                   alt="Institute Logo"
                   className="w-16 h-16 object-contain mx-auto mb-2 rounded-lg"
                 />
-                <h2 className="text-lg font-bold uppercase tracking-wider text-slate-800">TrustCare</h2>
+                <h2 className="text-lg font-bold uppercase tracking-wider" style={{ color: '#013220' }}>TrustCare</h2>
                 <p className="text-[9px] text-slate-500 uppercase tracking-widest font-semibold">{printReceiptData.branch} Branch</p>
               </div>
               <div className="flex justify-between text-xs">

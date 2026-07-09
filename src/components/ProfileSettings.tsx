@@ -82,7 +82,7 @@ export default function ProfileSettings({ userProfile, onProfileUpdated }: Profi
 
             {/* Account Info - Editable */}
             <div className="bg-slate-950/40 border border-slate-900 rounded-2xl p-5 mb-6 space-y-4">
-                <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider border-l-2 border-teal-500 pl-2">Account Info</h3>
+                <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Account Info</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1">
                         <label className="block text-xs font-semibold text-slate-400">Username</label>
@@ -140,7 +140,7 @@ export default function ProfileSettings({ userProfile, onProfileUpdated }: Profi
             {/* Institute Name Settings */}
             {userProfile?.role === "admin" && (
                 <div className="bg-slate-950/40 border border-slate-900 rounded-2xl p-5 space-y-4">
-                    <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider border-l-2 border-teal-500 pl-2">Institute Settings</h3>
+                    <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Institute Settings</h3>
 
                     <div className="space-y-1">
                         <label className="block text-xs font-semibold text-slate-400">Institute Name</label>

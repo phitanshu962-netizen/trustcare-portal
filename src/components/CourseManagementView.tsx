@@ -236,7 +236,7 @@ export default function CourseManagementView({ userProfile }: CourseManagementVi
 
             {showForm && (
                 <div className="bg-slate-950/40 border border-slate-900 rounded-2xl p-6 mb-8">
-                    <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider border-l-2 border-teal-500 pl-2 mb-5">
+                    <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-5">
                         {editingId ? "Edit Course" : "Create New Course"}
                     </h3>
                     <form onSubmit={handleSave} className="space-y-4">

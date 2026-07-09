@@ -462,7 +462,7 @@ export default function AdmissionView({
 
           {/* Receipt Info */}
           <div className="space-y-4">
-            <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest border-l-2 border-teal-500 pl-2">Receipt Information</h2>
+            <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Receipt Information</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <label className="block text-xs font-semibold text-slate-400">Receipt Number</label>
@@ -487,7 +487,7 @@ export default function AdmissionView({
 
           {/* Student Info */}
           <div className="space-y-4">
-            <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest border-l-2 border-teal-500 pl-2">Student Information</h2>
+            <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Student Information</h2>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="space-y-1.5">
                 <label className="block text-xs font-semibold text-slate-400">First Name*</label>
@@ -537,7 +537,7 @@ export default function AdmissionView({
 
           {/* Photo Upload */}
           <div className="space-y-4">
-            <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest border-l-2 border-teal-500 pl-2">Photo Upload</h2>
+            <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Photo Upload</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
               <div className="space-y-1.5">
                 <label htmlFor="student_photo" className="block text-xs font-semibold text-slate-400">
@@ -570,7 +570,7 @@ export default function AdmissionView({
 
           {/* Course Details */}
           <div className="space-y-4">
-            <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest border-l-2 border-teal-500 pl-2">Course Information</h2>
+            <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Course Information</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <label className="block text-xs font-semibold text-slate-400">Branch*</label>
@@ -639,7 +639,7 @@ export default function AdmissionView({
 
           {/* Payment Method */}
           <div className="space-y-4">
-            <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest border-l-2 border-teal-500 pl-2">Payment Details</h2>
+            <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Payment Details</h2>
             <div className="space-y-1.5">
               <label htmlFor="payment_mode" className="block text-xs font-semibold text-slate-400">Admission Payment Mode*</label>
               <select
@@ -660,7 +660,7 @@ export default function AdmissionView({
 
           {/* Guardian Info */}
           <div className="space-y-4">
-            <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest border-l-2 border-teal-500 pl-2">Guardian Information</h2>
+            <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Guardian Information</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <label htmlFor="guardian_relation" className="block text-xs font-semibold text-slate-400">Guardian Relation</label>

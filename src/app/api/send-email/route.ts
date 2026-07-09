@@ -47,10 +47,10 @@ async function generatePdfReceiptBuffer(type: string, data: any): Promise<Buffer
     y: 778,
     width: 547,
     height: 40,
-    color: rgb(0.05, 0.58, 0.53),
+    color: rgb(0.93, 0.97, 0.93), // Light green background tint
   });
 
-  // Header Title in white
+  // Header Title in extreme dark green
   const titleText = "TRUSTCARE INSTITUTE OF HEALTH SCIENCE";
   const titleWidth = boldFont.widthOfTextAtSize(titleText, 16);
   page.drawText(titleText, {
@@ -58,7 +58,7 @@ async function generatePdfReceiptBuffer(type: string, data: any): Promise<Buffer
     y: 790,
     size: 16,
     font: boldFont,
-    color: rgb(1, 1, 1),
+    color: rgb(0.004, 0.196, 0.125), // Extreme dark green (#013220)
   });
 
   // Subheaders
@@ -297,11 +297,11 @@ function generateEmailTemplate(type: string, data: any): string {
 <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; color: #1e293b;">
   <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; padding: 40px 20px; color: #1e293b;">
     <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); overflow: hidden; border: 1px solid #e2e8f0;">
-      <!-- Top Gradient Bar -->
-      <div style="background: linear-gradient(135deg, #0d9488 0%, #4f46e5 100%); padding: 32px 24px; text-align: center; color: white;">
-        <h1 style="margin: 0; font-size: 24px; font-weight: 800; letter-spacing: 0.5px;">TRUSTCARE</h1>
-        <p style="margin: 4px 0 0 0; font-size: 12px; font-weight: 600; letter-spacing: 1.5px; opacity: 0.85; text-transform: uppercase;">Institute of Health Science</p>
-        <div style="margin-top: 16px; display: inline-block; background: rgba(255,255,255,0.15); padding: 6px 16px; border-radius: 99px; font-size: 11px; font-weight: bold; letter-spacing: 1px; text-transform: uppercase;">
+      <!-- Top Bar -->
+      <div style="background: #f0faf4; border-bottom: 2px solid #013220; padding: 32px 24px; text-align: center;">
+        <h1 style="margin: 0; font-size: 24px; font-weight: 800; letter-spacing: 0.5px; color: #013220;">TRUSTCARE</h1>
+        <p style="margin: 4px 0 0 0; font-size: 12px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: #013220;">Institute of Health Science</p>
+        <div style="margin-top: 16px; display: inline-block; background: rgba(1, 50, 32, 0.1); color: #013220; border: 1px solid rgba(1, 50, 32, 0.2); padding: 6px 16px; border-radius: 99px; font-size: 11px; font-weight: bold; letter-spacing: 1px; text-transform: uppercase;">
           ${receiptTypeLabel}
         </div>
       </div>
@@ -347,7 +347,7 @@ function generateEmailTemplate(type: string, data: any): string {
         
         <p style="margin: 0; font-size: 13px; color: #64748b;">
           Best regards,<br />
-          <strong>TrustCare Institute of Health Science</strong>
+          <strong style="color: #013220;">TrustCare Institute of Health Science</strong>
         </p>
       </div>
       
