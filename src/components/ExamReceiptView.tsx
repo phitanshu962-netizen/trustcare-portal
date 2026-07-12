@@ -6,6 +6,7 @@ import {
   getNextReceiptNumberEF,
   ExamReceiptData
 } from "../lib/services/paymentService";
+import { getCourse } from "../lib/services/courseService";
 import {
   Receipt,
   Loader2,
@@ -102,7 +103,15 @@ export default function ExamReceiptView({ userProfile, onGoBack }: ExamReceiptVi
         const studentBranch = res.branch || userProfile?.branch || "kurla";
         setBranch(studentBranch);
 
-        const fee = getExamFee(studentBranch, res.courseName || "");
+        let fee = getExamFee(studentBranch, res.courseName || "");
+        try {
+          const courseData = await getCourse(res.courseName || "");
+          if (courseData && typeof courseData.examFee === "number" && courseData.examFee > 0) {
+            fee = courseData.examFee;
+          }
+        } catch (courseErr) {
+          console.warn("Failed to fetch course examFee from Firestore, using default:", courseErr);
+        }
         setTotalAmount(fee);
 
         showNotification("Student data loaded successfully!", "success");

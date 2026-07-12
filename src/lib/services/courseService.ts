@@ -21,6 +21,7 @@ export interface Course {
     duration: string;
     fees: number;
     admissionFee: number;
+    examFee?: number;
     active: boolean;
     createdAt?: any;
     updatedAt?: any;
@@ -69,6 +70,7 @@ export async function saveCourse(data: {
     duration: string;
     fees: number;
     admissionFee: number;
+    examFee?: number;
     createdBy?: string;
 }): Promise<{ success: boolean; message?: string }> {
     try {
@@ -81,6 +83,7 @@ export async function saveCourse(data: {
                 duration: data.duration,
                 fees: Number(data.fees),
                 admissionFee: Number(data.admissionFee),
+                examFee: Number(data.examFee || 0),
                 updatedAt: Timestamp.now(),
                 createdBy: data.createdBy || "Admin"
             });
@@ -91,6 +94,7 @@ export async function saveCourse(data: {
                 duration: data.duration,
                 fees: Number(data.fees),
                 admissionFee: Number(data.admissionFee),
+                examFee: Number(data.examFee || 0),
                 active: true,
                 createdAt: Timestamp.now(),
                 updatedAt: Timestamp.now(),
@@ -107,7 +111,8 @@ export async function saveCourse(data: {
                 courseId: data.courseId,
                 courseName: data.courseName,
                 fees: data.fees,
-                duration: data.duration
+                duration: data.duration,
+                examFee: data.examFee || 0
             })
         });
 

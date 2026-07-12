@@ -152,7 +152,7 @@ async function generatePdfReceiptBuffer(type: string, data: any): Promise<Buffer
     drawFieldRow("Duration:", data.courseDuration || '1 Year', "Enrollment ID:", data.enrollmentId || 'N/A');
   } else if (type === 'installment') {
     drawFieldRow("Installment No:", `#${data.installmentNumber || 1}`, "Enrollment ID:", data.enrollmentId || 'N/A');
-    drawFieldRow("Paid So Far:", `₹${(data.totalPaidSoFar || 0).toLocaleString('en-IN')}`, "Balance Due:", `₹${(data.balanceDue || 0).toLocaleString('en-IN')}`);
+    drawFieldRow("Paid So Far:", `Rs. ${(data.totalPaidSoFar || 0).toLocaleString('en-IN')}`, "Balance Due:", `Rs. ${(data.balanceDue || 0).toLocaleString('en-IN')}`);
   } else if (type === 'exam') {
     drawFieldRow("Purpose:", "Exam Registration Fee", "Enrollment ID:", data.enrollmentId || 'N/A');
   }
@@ -177,7 +177,7 @@ async function generatePdfReceiptBuffer(type: string, data: any): Promise<Buffer
     color: rgb(0.3, 0.3, 0.3),
   });
 
-  const amtText = `INR ₹${amountPaid}/-`;
+  const amtText = `INR ${amountPaid}/-`;
   const amtTextWidth = boldFont.widthOfTextAtSize(amtText, 16);
   page.drawText(amtText, {
     x: 520 - amtTextWidth,
@@ -375,13 +375,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid or missing receipt type" }, { status: 400 });
     }
 
-    const apiKey = process.env.RESEND_API_KEY;
+    const apiKey = process.env.SENDGRID_API_KEY;
     if (!apiKey) {
-      console.warn("RESEND_API_KEY is not configured in environment variables.");
-      return NextResponse.json({ error: "Resend API key is not configured on the server." }, { status: 500 });
+      console.warn("SENDGRID_API_KEY is not configured in environment variables.");
+      return NextResponse.json({ error: "SendGrid API key is not configured on the server." }, { status: 500 });
     }
 
-    const fromEmail = process.env.EMAIL_FROM || "onboarding@resend.dev";
+    const fromEmail = process.env.EMAIL_FROM || "trustcareinstitute03@gmail.com";
     const subject = `TrustCare Receipt - ${data.receiptNo || 'Transaction Alert'}`;
     const htmlContent = generateEmailTemplate(type, data);
 
@@ -392,11 +392,12 @@ export async function POST(req: Request) {
       const base64Content = pdfBuffer.toString('base64');
       const filename = `receipt_${(data.receiptNo || 'details').replace(/\//g, '-')}.pdf`;
 
-      // Resend requires `filename`, `content` (base64 string), and `content_type`
+      // SendGrid requires `content` (base64 encoded), `filename`, `type`, and `disposition`
       attachments.push({
-        filename,
         content: base64Content,
-        content_type: 'application/pdf',
+        filename,
+        type: 'application/pdf',
+        disposition: 'attachment',
       });
 
       console.log(`[send-email] PDF generated: ${filename} (${pdfBuffer.length} bytes)`);
@@ -405,29 +406,45 @@ export async function POST(req: Request) {
       // Continue sending email even if PDF generation failed — email body still delivers
     }
 
-    const response = await fetch("https://api.resend.com/emails", {
+    const response = await fetch("https://api.sendgrid.com/v3/mail/send", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: `TrustCare Institute <${fromEmail}>`,
-        to: [to],
-        subject: subject,
-        html: htmlContent,
-        attachments: attachments,
+        personalizations: [
+          {
+            to: [
+              {
+                email: to,
+              }
+            ],
+            subject: subject,
+          }
+        ],
+        from: {
+          email: fromEmail,
+          name: "TrustCare Institute",
+        },
+        content: [
+          {
+            type: "text/html",
+            value: htmlContent,
+          }
+        ],
+        attachments: attachments.length > 0 ? attachments : undefined,
       }),
     });
 
-    const resBody = await response.json();
-
     if (!response.ok) {
-      console.error("Resend API error response:", resBody);
-      return NextResponse.json({ error: resBody.message || "Failed to send email via Resend" }, { status: response.status });
+      const resBody = await response.json().catch(() => ({}));
+      console.error("SendGrid API error response:", resBody);
+      const errorMessage = resBody.errors?.[0]?.message || "Failed to send email via SendGrid";
+      return NextResponse.json({ error: errorMessage }, { status: response.status });
     }
 
-    return NextResponse.json({ success: true, messageId: resBody.id });
+    return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error("Error sending email:", error);
     return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 });

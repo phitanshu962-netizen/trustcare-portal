@@ -10,7 +10,8 @@ import {
   getDocs, 
   addDoc, 
   Timestamp,
-  orderBy
+  orderBy,
+  deleteDoc
 } from "firebase/firestore";
 
 export interface Installment {
@@ -491,5 +492,28 @@ export async function getFeeStructureData(branchFilter?: string) {
   } catch (error) {
     console.error("Error getting fee structure data:", error);
     return { data: [], summary: { totalRecords: 0, totalAdmissionFees: 0, totalCourseFees: 0, totalExamFees: 0, totalAmountDue: 0, mostCommonPaymentMode: "" } };
+  }
+}
+
+// Delete fee structure and related installment schedule/payments
+export async function deleteFeeStructure(enrollmentId: string): Promise<{ success: boolean; message?: string }> {
+  try {
+    await deleteDoc(doc(db, "feeStructures", enrollmentId));
+    await deleteDoc(doc(db, "installmentSchedules", enrollmentId));
+    await deleteDoc(doc(db, "installmentPayments", enrollmentId));
+    
+    // Log to auditLogs
+    await addDoc(collection(db, "auditLogs"), {
+      logId: `LOG-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+      userId: "Admin",
+      action: "Fee Structure Deleted",
+      timestamp: Timestamp.now(),
+      details: JSON.stringify({ enrollmentId })
+    });
+    
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error deleting fee structure:", error);
+    return { success: false, message: error.message };
   }
 }

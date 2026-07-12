@@ -154,7 +154,7 @@ export default function AdmissionView({
   const [errorMsg, setErrorMsg] = useState("");
 
   // Use Firestore-based config with fallback to inline config
-  const [config, setConfig] = useState({ duration: "1 Year", fees: 30000, admission_fee: 5000 });
+  const [config, setConfig] = useState({ duration: "1 Year", fees: 30000, admission_fee: 5000, exam_fee: 0 });
   const [courseList, setCourseList] = useState<Course[]>([]);
 
   // Fetch courses dynamically for dropdown
@@ -177,7 +177,8 @@ export default function AdmissionView({
           setConfig({
             duration: courseData.duration,
             fees: courseData.fees,
-            admission_fee: courseData.admissionFee || 0
+            admission_fee: courseData.admissionFee || 0,
+            exam_fee: courseData.examFee || 0
           });
         } else {
           // Fallback: try searching all courses
@@ -187,16 +188,29 @@ export default function AdmissionView({
             setConfig({
               duration: found.duration,
               fees: found.fees,
-              admission_fee: found.admissionFee || 0
+              admission_fee: found.admissionFee || 0,
+              exam_fee: found.examFee || 0
             });
           } else {
             // Fallback to inline config
-            setConfig(getCourseConfig(branch, course));
+            const fallback = getCourseConfig(branch, course);
+            setConfig({
+              duration: fallback.duration,
+              fees: fallback.fees,
+              admission_fee: fallback.admission_fee,
+              exam_fee: (fallback as any).exam_fee || 0
+            });
           }
         }
       } catch (err) {
         console.warn("Failed to load course config from Firestore, using inline defaults:", err);
-        setConfig(getCourseConfig(branch, course));
+        const fallback = getCourseConfig(branch, course);
+        setConfig({
+          duration: fallback.duration,
+          fees: fallback.fees,
+          admission_fee: fallback.admission_fee,
+          exam_fee: (fallback as any).exam_fee || 0
+        });
       }
     }
     loadCourseConfig();
@@ -605,7 +619,7 @@ export default function AdmissionView({
             </div>
 
             {course && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-2">
                 <div className="space-y-1.5">
                   <label className="block text-xs font-semibold text-slate-400">Course Duration</label>
                   <input
@@ -630,6 +644,15 @@ export default function AdmissionView({
                     type="text"
                     value={`₹${config.admission_fee.toLocaleString()}`}
                     className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-indigo-400 cursor-not-allowed font-bold"
+                    readOnly
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-slate-400">Exam Fee</label>
+                  <input
+                    type="text"
+                    value={`₹${(config.exam_fee || 0).toLocaleString()}`}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-amber-400 cursor-not-allowed font-bold"
                     readOnly
                   />
                 </div>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { UserProfile } from "../lib/services/authService";
-import { getFeeStructureData } from "../lib/services/paymentService";
+import { getFeeStructureData, deleteFeeStructure } from "../lib/services/paymentService";
 import { getAdmissionAnalytics, AdmissionData, deleteAdmission } from "../lib/services/admissionService";
 import { getInquiryAnalytics, InquiryData, deleteInquiry } from "../lib/services/inquiryService";
 import { 
@@ -381,6 +381,105 @@ export default function AnalyticsView({
     return processedData.slice(startIndex, startIndex + pageSize);
   }, [processedData, currentPage, pageSize]);
 
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // Reset selection when tab changes or search/filters change
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [activeTab, searchQuery, branchFilter, courseFilter, paymentModeFilter, timePeriodFilter, dateFrom, dateTo]);
+
+  const getRowId = (row: any) => {
+    if (activeTab === "fee-structure" || activeTab === "due-fees") {
+      return row.enrollmentId;
+    }
+    return row.id;
+  };
+
+  const handleSelectRow = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const handleSelectAll = () => {
+    const allIdsOnPage = paginatedData.map(row => getRowId(row)).filter(Boolean) as string[];
+    const allSelectedOnPage = allIdsOnPage.every(id => selectedIds.has(id));
+
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (allSelectedOnPage) {
+        allIdsOnPage.forEach(id => next.delete(id));
+      } else {
+        allIdsOnPage.forEach(id => next.add(id));
+      }
+      return next;
+    });
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+
+    let confirmMsg = "";
+    if (activeTab === "fee-structure" || activeTab === "due-fees") {
+      confirmMsg = `Are you sure you want to delete the ${selectedIds.size} selected fee structures? This will also remove their installment schedules and payment histories.`;
+    } else if (activeTab === "admission-analytics") {
+      confirmMsg = `Are you sure you want to delete the ${selectedIds.size} selected admission records?`;
+    } else if (activeTab === "inquiry-analytics") {
+      confirmMsg = `Are you sure you want to delete the ${selectedIds.size} selected inquiry records?`;
+    }
+
+    if (!window.confirm(confirmMsg)) return;
+
+    setLoading(true);
+    try {
+      const idsArray = Array.from(selectedIds);
+      let successCount = 0;
+      let failureCount = 0;
+
+      for (const id of idsArray) {
+        let res;
+        if (activeTab === "fee-structure" || activeTab === "due-fees") {
+          res = await deleteFeeStructure(id);
+          if (res.success) {
+            setFeeStructures(prev => prev.filter(f => f.enrollmentId !== id));
+            successCount++;
+          } else {
+            failureCount++;
+          }
+        } else if (activeTab === "admission-analytics") {
+          res = await deleteAdmission(id);
+          if (res.success) {
+            setAdmissions(prev => prev.filter(a => a.id !== id));
+            successCount++;
+          } else {
+            failureCount++;
+          }
+        } else if (activeTab === "inquiry-analytics") {
+          res = await deleteInquiry(id);
+          if (res.success) {
+            setInquiries(prev => prev.filter(i => i.id !== id));
+            successCount++;
+          } else {
+            failureCount++;
+          }
+        }
+      }
+
+      setSelectedIds(new Set());
+      alert(`Bulk delete completed! Successfully deleted ${successCount} record(s).` + (failureCount > 0 ? ` Failed to delete ${failureCount} record(s).` : ""));
+    } catch (err: any) {
+      alert("Bulk delete failed: " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Export CSV helper
   const handleExportCSV = () => {
     let headers: string[] = [];
@@ -668,6 +767,14 @@ export default function AnalyticsView({
         </div>
 
         <div className="flex gap-2 w-full sm:w-auto">
+          {selectedIds.size > 0 && userProfile?.role === "admin" && (
+            <button
+              onClick={handleBulkDelete}
+              className="flex-1 sm:flex-initial px-3 py-1.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-450 border border-rose-500/25 hover:border-rose-500/35 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer hover-lift shadow-md"
+            >
+              <Trash2 className="h-3.5 w-3.5 text-rose-400" /> Delete Selected ({selectedIds.size})
+            </button>
+          )}
           <button
             onClick={handleCopyClipboard}
             className="flex-1 sm:flex-initial px-3 py-1.5 bg-slate-900/60 hover:bg-slate-850 text-slate-400 hover:text-slate-200 border border-slate-800 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer hover-lift shadow-md"
@@ -699,10 +806,20 @@ export default function AnalyticsView({
           <table className="w-full text-left border-collapse text-xs whitespace-nowrap">
             <thead>
               <tr className="border-b border-slate-900 bg-slate-900/10 text-slate-450 uppercase tracking-wider text-[10px] font-bold">
+                {/* Select All Checkbox */}
+                <th className="px-4 py-3 text-center w-10">
+                  <input
+                    type="checkbox"
+                    checked={paginatedData.length > 0 && paginatedData.every(row => selectedIds.has(getRowId(row)))}
+                    onChange={handleSelectAll}
+                    className="h-4 w-4 text-teal-550 border-slate-800 bg-slate-950 rounded focus:ring-teal-500/30 cursor-pointer"
+                  />
+                </th>
                 
                 {/* 1. FEE STRUCTURE COLUMNS */}
                 {activeTab === "fee-structure" && (
                   <>
+                    <th className="px-4 py-3">Action</th>
                     <th onClick={() => handleSort("timestamp")} className="px-4 py-3 cursor-pointer hover:bg-slate-900/25 select-none"><span className="flex items-center gap-1">Timestamp <ArrowUpDown className="h-3 w-3" /></span></th>
                     <th onClick={() => handleSort("enrollmentId")} className="px-4 py-3 cursor-pointer hover:bg-slate-900/25 select-none"><span className="flex items-center gap-1">Enrollment ID <ArrowUpDown className="h-3 w-3" /></span></th>
                     <th onClick={() => handleSort("name")} className="px-4 py-3 cursor-pointer hover:bg-slate-900/25 select-none"><span className="flex items-center gap-1">Name <ArrowUpDown className="h-3 w-3" /></span></th>
@@ -723,6 +840,7 @@ export default function AnalyticsView({
                 {/* 2. DUE FEES COLUMNS */}
                 {activeTab === "due-fees" && (
                   <>
+                    <th className="px-4 py-3">Action</th>
                     <th onClick={() => handleSort("enrollmentId")} className="px-4 py-3 cursor-pointer hover:bg-slate-900/25 select-none"><span className="flex items-center gap-1">Enrollment ID <ArrowUpDown className="h-3 w-3" /></span></th>
                     <th onClick={() => handleSort("name")} className="px-4 py-3 cursor-pointer hover:bg-slate-900/25 select-none"><span className="flex items-center gap-1">Student Name <ArrowUpDown className="h-3 w-3" /></span></th>
                     <th onClick={() => handleSort("courseName")} className="px-4 py-3 cursor-pointer hover:bg-slate-900/25 select-none"><span className="flex items-center gap-1">Course <ArrowUpDown className="h-3 w-3" /></span></th>
@@ -768,10 +886,39 @@ export default function AnalyticsView({
             <tbody className="divide-y divide-slate-900/80 bg-slate-950/20">
               {paginatedData.map((row, idx) => (
                 <tr key={idx} className="hover:bg-slate-900/20 text-slate-350 transition-colors">
+                  {/* Select Row Checkbox */}
+                  <td className="px-4 py-3 text-center w-10">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(getRowId(row))}
+                      onChange={() => handleSelectRow(getRowId(row))}
+                      className="h-4 w-4 text-teal-500 border-slate-800 bg-slate-950 rounded focus:ring-teal-500/30 cursor-pointer"
+                    />
+                  </td>
                   
                   {/* FEE STRUCTURE ROWS */}
                   {activeTab === "fee-structure" && (
                     <>
+                      <td className="px-4 py-3">
+                        {userProfile?.role === "admin" && (
+                          <button
+                            onClick={async () => {
+                              if (window.confirm("Are you sure you want to delete this fee structure? This will also remove the student's installment schedule and payment history.")) {
+                                const res = await deleteFeeStructure(row.enrollmentId);
+                                if (res.success) {
+                                  setFeeStructures(prev => prev.filter(f => f.enrollmentId !== row.enrollmentId));
+                                } else {
+                                  alert(res.message);
+                                }
+                              }
+                            }}
+                            className="px-2.5 py-1 bg-rose-500/10 border border-rose-500/25 text-rose-400 hover:opacity-90 active:scale-95 transition-all rounded-lg flex items-center justify-center cursor-pointer hover-lift"
+                            title="Delete Fee Structure"
+                          >
+                            <Trash2 className="h-3.5 w-3.5 text-rose-450" />
+                          </button>
+                        )}
+                      </td>
                       <td className="px-4 py-3 font-mono text-[10px] text-slate-500">
                         {row.timestamp?.seconds ? new Date(row.timestamp.seconds * 1000).toLocaleDateString("en-GB") : row.timestamp || ""}
                       </td>
@@ -794,6 +941,26 @@ export default function AnalyticsView({
                   {/* DUE FEES ROWS */}
                   {activeTab === "due-fees" && (
                     <>
+                      <td className="px-4 py-3">
+                        {userProfile?.role === "admin" && (
+                          <button
+                            onClick={async () => {
+                              if (window.confirm("Are you sure you want to delete this fee structure? This will also remove the student's installment schedule and payment history.")) {
+                                const res = await deleteFeeStructure(row.enrollmentId);
+                                if (res.success) {
+                                  setFeeStructures(prev => prev.filter(f => f.enrollmentId !== row.enrollmentId));
+                                } else {
+                                  alert(res.message);
+                                }
+                              }
+                            }}
+                            className="px-2.5 py-1 bg-rose-500/10 border border-rose-500/25 text-rose-400 hover:opacity-90 active:scale-95 transition-all rounded-lg flex items-center justify-center cursor-pointer hover-lift"
+                            title="Delete Fee Structure"
+                          >
+                            <Trash2 className="h-3.5 w-3.5 text-rose-450" />
+                          </button>
+                        )}
+                      </td>
                       <td className="px-4 py-3 font-semibold text-slate-400">{row.enrollmentId}</td>
                       <td className="px-4 py-3 text-slate-100 font-semibold">{row.name}</td>
                       <td className="px-4 py-3 text-slate-400 capitalize">{String(row.courseName).replace(/_/g, " ")}</td>
