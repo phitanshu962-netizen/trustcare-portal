@@ -38,7 +38,7 @@ export async function getAllCourses(): Promise<Course[]> {
         const snapshot = await getDocs(q);
         const courses: Course[] = [];
         snapshot.forEach((docSnap) => {
-            courses.push({ id: docSnap.id, ...docSnap.data() } as Course);
+            courses.push({ ...docSnap.data(), id: docSnap.id } as Course);
         });
         return courses;
     } catch (error) {
@@ -54,7 +54,7 @@ export async function getCourse(courseId: string): Promise<Course | null> {
         const snapshot = await getDocs(q);
         if (!snapshot.empty) {
             const docSnap = snapshot.docs[0];
-            return { id: docSnap.id, ...docSnap.data() } as Course;
+            return { ...docSnap.data(), id: docSnap.id } as Course;
         }
         return null;
     } catch (error) {

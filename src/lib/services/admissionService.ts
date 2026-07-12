@@ -166,8 +166,19 @@ export async function saveAdmissionData(
 
     return { success: true, message: "Admission completed successfully!" };
   } catch (error: any) {
-    console.error("Error saving admission:", error);
-    return { success: false, message: error.message || "Failed to complete admission." };
+    console.error("Error saving admission data:", error);
+    return { success: false, message: error.message || "Failed to save data." };
+  }
+}
+
+// Update admission photo URL
+export async function updateAdmissionPhotoUrl(id: string, photoUrl: string) {
+  try {
+    await updateDoc(doc(db, "admissions", id), { photoUrl });
+    return { success: true, message: "Photo updated successfully" };
+  } catch (error: any) {
+    console.error("Error updating photo:", error);
+    return { success: false, message: error.message };
   }
 }
 
@@ -186,7 +197,7 @@ export async function getAdmissionAnalytics(branchFilter?: string) {
 
     querySnapshot.forEach((docSnap) => {
       const docData = docSnap.data();
-      const row = { id: docSnap.id, ...docData } as AdmissionData;
+      const row = { ...docData, id: docSnap.id } as AdmissionData;
       data.push(row);
       totalFees += Number(row.totalCourseFees || 0);
 

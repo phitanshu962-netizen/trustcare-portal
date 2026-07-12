@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { UserProfile } from "../lib/services/authService";
 import { getFeeStructureData, deleteFeeStructure } from "../lib/services/paymentService";
-import { getAdmissionAnalytics, AdmissionData, deleteAdmission } from "../lib/services/admissionService";
+import { getAdmissionAnalytics, AdmissionData, deleteAdmission, updateAdmissionPhotoUrl, uploadStudentPhoto } from "../lib/services/admissionService";
 import { getInquiryAnalytics, InquiryData, deleteInquiry } from "../lib/services/inquiryService";
 import { 
   GraduationCap, 
@@ -27,7 +27,9 @@ import {
   AlertCircle,
   Sparkles,
   ArrowUpDown,
-  Trash2
+  Trash2,
+  User,
+  Upload
 } from "lucide-react";
 import { CircleIndianRupee } from "./CircleIndianRupee";
 
@@ -480,6 +482,27 @@ export default function AnalyticsView({
     }
   };
 
+  const handlePhotoUpload = async (row: AdmissionData, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !row.id || !row.enrollmentId) return;
+    
+    try {
+      setLoading(true);
+      const url = await uploadStudentPhoto(row.enrollmentId, file);
+      const res = await updateAdmissionPhotoUrl(row.id, url);
+      if (res.success) {
+        setAdmissions(prev => prev.map(a => a.id === row.id ? { ...a, photoUrl: url } : a));
+        alert("Profile photo updated successfully!");
+      } else {
+        alert(res.message);
+      }
+    } catch (err: any) {
+      alert("Failed to upload photo: " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Export CSV helper
   const handleExportCSV = () => {
     let headers: string[] = [];
@@ -856,6 +879,7 @@ export default function AnalyticsView({
                     <th onClick={() => handleSort("date")} className="px-4 py-3 cursor-pointer hover:bg-slate-900/25 select-none"><span className="flex items-center gap-1">Date <ArrowUpDown className="h-3 w-3" /></span></th>
                     <th onClick={() => handleSort("receiptNumber")} className="px-4 py-3 cursor-pointer hover:bg-slate-900/25 select-none"><span className="flex items-center gap-1">Receipt No <ArrowUpDown className="h-3 w-3" /></span></th>
                     <th onClick={() => handleSort("enrollmentId")} className="px-4 py-3 cursor-pointer hover:bg-slate-900/25 select-none"><span className="flex items-center gap-1">Enrollment ID <ArrowUpDown className="h-3 w-3" /></span></th>
+              <th className="px-4 py-3">Photo</th>
                     <th onClick={() => handleSort("studentName")} className="px-4 py-3 cursor-pointer hover:bg-slate-900/25 select-none"><span className="flex items-center gap-1">Student Name <ArrowUpDown className="h-3 w-3" /></span></th>
                     <th onClick={() => handleSort("courseName")} className="px-4 py-3 cursor-pointer hover:bg-slate-900/25 select-none"><span className="flex items-center gap-1">Course <ArrowUpDown className="h-3 w-3" /></span></th>
                     <th onClick={() => handleSort("totalCourseFees")} className="px-4 py-3 cursor-pointer hover:bg-slate-900/25 select-none text-right">Course Fee</th>
@@ -997,6 +1021,21 @@ export default function AnalyticsView({
                             <Trash2 className="h-3.5 w-3.5 text-rose-450" />
                           </button>
                         )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          {row.photoUrl ? (
+                            <img src={row.photoUrl} alt="Student" className="w-8 h-8 rounded-full object-cover border border-slate-700 shadow-md" />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700 shadow-md">
+                              <User className="h-4 w-4 text-slate-500" />
+                            </div>
+                          )}
+                          <label className="cursor-pointer text-[10px] font-bold text-teal-400 hover:text-teal-300 flex items-center gap-1 bg-slate-900/50 px-2 py-1 rounded-md border border-slate-800 transition-colors">
+                            <Upload className="h-3 w-3" />
+                            <input type="file" className="hidden" accept="image/*" onChange={(e) => handlePhotoUpload(row, e)} />
+                          </label>
+                        </div>
                       </td>
                       <td className="px-4 py-3 font-mono text-[10px] text-slate-500">{row.date}</td>
                       <td className="px-4 py-3 text-slate-450 font-medium">{row.receiptNumber}</td>

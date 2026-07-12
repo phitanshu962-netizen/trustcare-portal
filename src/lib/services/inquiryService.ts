@@ -52,7 +52,7 @@ export async function checkAadharNumberInquiry(aadharNumber: string): Promise<In
     }
 
     const docSnap = querySnapshot.docs[0];
-    return { id: docSnap.id, ...docSnap.data() } as InquiryData;
+    return { ...docSnap.data(), id: docSnap.id } as InquiryData;
   } catch (error) {
     console.error("Error checking Aadhar number:", error);
     throw error;
@@ -124,7 +124,7 @@ export async function getInquiryAnalytics(branchFilter?: string) {
 
     querySnapshot.forEach((docSnap) => {
       const docData = docSnap.data();
-      const row = { id: docSnap.id, ...docData } as InquiryData;
+      const row = { ...docData, id: docSnap.id } as InquiryData;
       data.push(row);
 
       const course = row.interestedCourse;

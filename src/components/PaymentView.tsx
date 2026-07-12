@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { UserProfile } from "../lib/services/authService";
 import { db } from "../lib/firebase";
-import { normalizeEnrollmentId } from "../lib/utils";
 import { doc, getDoc } from "firebase/firestore";
 import {
   getStudentDataByEnrollmentId,
@@ -15,6 +14,7 @@ import {
 } from "../lib/services/paymentService";
 import { openCoursePaymentReceipt, openInstallmentReceipt } from "./CoursePaymentReceiptView";
 import {
+  CircleDollarSign,
   CheckCircle2,
   AlertCircle,
   Loader2,
@@ -26,7 +26,6 @@ import {
   Calendar,
   X
 } from "lucide-react";
-import { CircleIndianRupee } from "./CircleIndianRupee";
 
 interface PaymentViewProps {
   userProfile: UserProfile | null;
@@ -111,31 +110,26 @@ export default function PaymentView({
 
   useEffect(() => {
     if (initialEnrollmentId) {
-      const normalized = normalizeEnrollmentId(initialEnrollmentId);
-      setEnrollmentId(normalized);
-      setStudentName(initialStudentName || "");
-      setCourseName(initialCourseName || "");
-      setReceiptNo(initialReceiptNo || "");
-      checkExistingSchedule(normalized);
+      setEnrollmentId(initialEnrollmentId);
+      handleEnrollmentSearch(initialEnrollmentId);
     }
   }, [initialEnrollmentId]);
 
   const checkExistingSchedule = async (id: string) => {
-    const normalized = normalizeEnrollmentId(id);
     setLoading(true);
     try {
-      const saved = await loadInstallmentSchedule(normalized);
+      const saved = await loadInstallmentSchedule(id);
       if (saved && saved.length > 0) {
         setSchedule(saved);
         setLocked(true);
         setConfirmed(true);
         setPaymentType(saved.length === 1 ? "full" : "emi");
-        const firstDoc = await getStudentDataByEnrollmentId(normalized);
+        const firstDoc = await getStudentDataByEnrollmentId(id);
         if (firstDoc.success) {
           setBranch(firstDoc.branch || userProfile?.branch || "MAIN");
           setStudentEmail(firstDoc.email || "");
           setPhotoUrl(firstDoc.photoUrl || "");
-          const hist = await getInstallmentPaymentsForStudent(normalized);
+          const hist = await getInstallmentPaymentsForStudent(id);
           if (hist) setPaymentMethod(hist.paymentMethod || "Cash");
         }
       }
@@ -146,16 +140,14 @@ export default function PaymentView({
     }
   };
 
-  const handleEnrollmentSearch = async () => {
-    const trimmedId = enrollmentId.trim();
-    if (!trimmedId) return;
-    const normalized = normalizeEnrollmentId(trimmedId);
-    setEnrollmentId(normalized);
+  const handleEnrollmentSearch = async (idOverride?: string | React.MouseEvent) => {
+    const searchId = typeof idOverride === 'string' ? idOverride : enrollmentId;
+    if (!searchId.trim()) return;
     setLoading(true);
     setErrorMsg("");
     setSuccessMsg("");
     try {
-      const res = await getStudentDataByEnrollmentId(normalized);
+      const res = await getStudentDataByEnrollmentId(searchId.trim());
       if (res.success && res.studentName) {
         setStudentName(res.studentName);
         setCourseName(res.courseName);
@@ -168,7 +160,7 @@ export default function PaymentView({
         if (res.totalCourseFees) setDbTotalFees(res.totalCourseFees);
         if (res.guardianName) setGuardianName(res.guardianName);
         if (res.guardianRelation) setGuardianRelation(res.guardianRelation);
-        await checkExistingSchedule(normalized);
+        await checkExistingSchedule(searchId.trim());
       } else {
         setErrorMsg("Enrollment ID not found in database.");
       }
@@ -335,47 +327,6 @@ export default function PaymentView({
       if (res.success) {
         setSuccessMsg(`Installment ${inst.installmentNumber} recorded successfully!`);
         await checkExistingSchedule(enrollmentId);
-
-        // Auto-send installment email if student email is available
-        if (studentEmail) {
-          try {
-            const updatedSchedule = schedule.map(s => s.installmentNumber === inst.installmentNumber ? { ...s, status: "Paid" as const } : s);
-            const paidUpToNow = updatedSchedule
-              .filter((s) => s.status === "Paid" && s.installmentNumber <= inst.installmentNumber)
-              .reduce((sum, s) => sum + s.amount, 0);
-            const allPaid = updatedSchedule
-              .filter((s) => s.status === "Paid")
-              .reduce((sum, s) => sum + s.amount, 0);
-            const totalPayable = updatedSchedule.reduce((sum, s) => sum + s.amount, 0) || totalFees;
-            const balanceDue = Math.max(0, totalPayable - allPaid);
-
-            await fetch("/api/send-email", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                to: studentEmail,
-                type: "installment",
-                data: {
-                  receiptNo: receiptNo || `IR-${enrollmentId}-${inst.installmentNumber}`,
-                  date: new Date().toLocaleDateString("en-GB"),
-                  studentName: studentName,
-                  courseName: courseName,
-                  installmentNumber: inst.installmentNumber,
-                  amountPaid: inst.amount,
-                  paymentMode: paymentMethod,
-                  receivedBy: userProfile?.username || "Authorized Officer",
-                  branch: branch.toUpperCase(),
-                  totalPaidSoFar: paidUpToNow,
-                  balanceDue: balanceDue,
-                  totalFees: totalPayable,
-                }
-              })
-            });
-            setEmailSentState(prev => ({ ...prev, [inst.installmentNumber]: true }));
-          } catch (mailErr) {
-            console.warn("Could not auto-send installment email:", mailErr);
-          }
-        }
       }
       else setErrorMsg(res.message || "Failed to record payment.");
     } catch (err: any) { setErrorMsg(err.message || "Error saving payment."); }
@@ -520,7 +471,7 @@ export default function PaymentView({
       <div className="absolute bottom-0 left-0 -z-10 h-32 w-32 bg-indigo-500/10 blur-2xl rounded-full" />
       <div className="border-b border-slate-900 pb-4 mb-6 text-center">
         <h1 className="text-2xl sm:text-3xl font-extrabold bg-gradient-to-r from-teal-600 to-indigo-600 bg-clip-text text-transparent flex items-center justify-center gap-3">
-          <CircleIndianRupee className="h-7 w-7 text-teal-400" />COURSE PAYMENT
+          <CircleDollarSign className="h-7 w-7 text-teal-400" />COURSE PAYMENT
         </h1>
       </div>
 
@@ -556,7 +507,7 @@ export default function PaymentView({
               value={enrollmentId}
               onChange={(e) => setEnrollmentId(e.target.value)}
               className="flex-1 bg-slate-950/80 border border-slate-850 rounded-xl px-4 py-2 text-sm text-slate-100 placeholder-slate-700 focus:outline-none focus:border-teal-500/50 font-medium"
-              placeholder="e.g. TCIHS001"
+              placeholder="e.g. TCHS001"
               disabled={locked}
             />
             {!locked && (
