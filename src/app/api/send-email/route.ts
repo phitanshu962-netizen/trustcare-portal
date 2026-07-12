@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import fs from 'fs';
+import path from 'path';
 
 // Force Node.js runtime so pdf-lib (which uses Buffer/Uint8Array) works correctly
 export const runtime = 'nodejs';
@@ -7,232 +9,285 @@ export const runtime = 'nodejs';
 
 async function generatePdfReceiptBuffer(type: string, data: any): Promise<Buffer> {
   const pdfDoc = await PDFDocument.create();
-  const page = pdfDoc.addPage([595, 842]); // A4 Size (in points: 595 x 842)
+  const page = pdfDoc.addPage([595, 420]); // A5 Landscape Size (in points: 595 x 420)
 
-  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-  const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  // Use Times-Roman (Serif) fonts to match the browser fonts exactly
+  const font = await pdfDoc.embedFont(StandardFonts.TimesRoman);
+  const boldFont = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
 
   const studentName = data.studentName || 'Student';
   const receiptNo = data.receiptNo || 'N/A';
   const date = data.date || new Date().toLocaleDateString('en-GB');
   const courseName = (data.courseName || '').replace(/_/g, ' ').toUpperCase();
   const paymentMode = data.paymentMode || 'N/A';
-  const amountPaid = (data.amountPaid || data.totalAmount || 0).toLocaleString('en-IN');
+  const receivedBy = data.receivedBy || 'Authorized Officer';
   const branch = (data.branch || 'Mankhurd').toUpperCase();
 
-  // Draw border
-  // Outer border
-  page.drawRectangle({
-    x: 20,
-    y: 20,
-    width: 555,
-    height: 802,
-    borderWidth: 2,
-    borderColor: rgb(0.05, 0.58, 0.53), // Teal #0d9488
-  });
-  
-  // Inner border
-  page.drawRectangle({
-    x: 24,
-    y: 24,
-    width: 547,
-    height: 794,
-    borderWidth: 0.5,
-    borderColor: rgb(0.7, 0.7, 0.7),
-  });
+  const darkGreen = rgb(0.004, 0.196, 0.125); // #013220 (Extreme Dark Green)
+  const grayColor = rgb(0.4, 0.4, 0.4);
+  const blackColor = rgb(0, 0, 0);
 
-  // Top header colored bar
-  page.drawRectangle({
-    x: 24,
-    y: 778,
-    width: 547,
-    height: 40,
-    color: rgb(0.93, 0.97, 0.93), // Light green background tint
-  });
+  // Determine Purpose To Pay checkboxes
+  const isAdmission = type === 'admission';
+  const isCourse = type === 'installment';
+  const isExam = type === 'exam';
 
-  // Header Title in extreme dark green
-  const titleText = "TRUSTCARE INSTITUTE OF HEALTH SCIENCE";
-  const titleWidth = boldFont.widthOfTextAtSize(titleText, 16);
-  page.drawText(titleText, {
-    x: (595 - titleWidth) / 2,
-    y: 790,
-    size: 16,
-    font: boldFont,
-    color: rgb(0.004, 0.196, 0.125), // Extreme dark green (#013220)
-  });
+  // Determine Payment Mode checkboxes
+  const modeLower = paymentMode.toLowerCase();
+  const isCash = modeLower === 'cash';
+  const isOnline = modeLower === 'online' || modeLower === 'upi' || modeLower === 'bank' || modeLower === 'gpay' || modeLower === 'phonepe';
+  const isCheque = modeLower === 'cheque';
 
-  // Subheaders
-  const subText1 = `${branch} BRANCH`;
-  const subText1Width = font.widthOfTextAtSize(subText1, 10);
-  page.drawText(subText1, {
-    x: (595 - subText1Width) / 2,
-    y: 755,
-    size: 10,
-    font: font,
-    color: rgb(0.1, 0.1, 0.1),
-  });
+  // Financial values
+  let totalFees = 0;
+  let amountPaid = 0;
+  let balanceDue = 0;
 
-  const subText2 = "Email: trustcareinstitute03@gmail.com";
-  const subText2Width = font.widthOfTextAtSize(subText2, 9);
-  page.drawText(subText2, {
-    x: (595 - subText2Width) / 2,
-    y: 740,
-    size: 9,
-    font: font,
-    color: rgb(0.3, 0.3, 0.3),
-  });
+  if (type === 'admission') {
+    amountPaid = data.amountPaid || 0;
+    totalFees = data.totalFees || amountPaid;
+    balanceDue = 0;
+  } else if (type === 'installment') {
+    amountPaid = data.amountPaid || 0;
+    totalFees = data.totalFees || 0;
+    balanceDue = data.balanceDue || 0;
+  } else if (type === 'exam') {
+    amountPaid = data.amountPaid || data.totalAmount || 0;
+    totalFees = amountPaid;
+    balanceDue = 0;
+  }
 
-  // Horizontal divider
-  page.drawLine({
-    start: { x: 40, y: 725 },
-    end: { x: 555, y: 725 },
-    thickness: 1,
-    color: rgb(0.8, 0.8, 0.8),
-  });
-
-  // Receipt Badge
-  let badgeLabel = 'RECEIPT';
+  let badgeLabel = 'FEE RECEIPT';
   if (type === 'admission') badgeLabel = 'ADMISSION RECEIPT';
-  else if (type === 'installment') badgeLabel = 'INSTALLMENT RECEIPT';
   else if (type === 'exam') badgeLabel = 'EXAM FEE RECEIPT';
 
-  const badgeWidth = boldFont.widthOfTextAtSize(badgeLabel, 12);
-  const badgeBoxWidth = badgeWidth + 30;
-  
-  // Draw filled badge background
-  page.drawRectangle({
-    x: (595 - badgeBoxWidth) / 2,
-    y: 695,
-    width: badgeBoxWidth,
-    height: 22,
-    color: rgb(0.3, 0.27, 0.9), // Indigo #4f46e5-ish
+  // Draw Watermark and Logo PNG (Dual top logos and transparent watermark)
+  try {
+    const logoPath = path.join(process.cwd(), 'public', 'TrustCareLogo.png');
+    if (fs.existsSync(logoPath)) {
+      const logoBytes = fs.readFileSync(logoPath);
+      const logoImage = await pdfDoc.embedPng(logoBytes);
+      
+      // Draw watermark in center (opacity 0.05)
+      page.drawImage(logoImage, {
+        x: 187.5,
+        y: 110,
+        width: 220,
+        height: 200,
+        opacity: 0.05,
+      });
+
+      // Draw top-left logo (width 82, height 75)
+      page.drawImage(logoImage, {
+        x: 45,
+        y: 300,
+        width: 82,
+        height: 75,
+      });
+
+      // Draw top-right logo (width 82, height 75)
+      page.drawImage(logoImage, {
+        x: 468,
+        y: 300,
+        width: 82,
+        height: 75,
+      });
+    }
+  } catch (err) {
+    console.error("Error embedding logo in PDF:", err);
+  }
+
+  // Draw rounded main border around the page matching browser print graphic exactly (using cubic curves)
+  page.drawSvgPath(
+    'M 40 20 L 555 20 C 566.04 20 575 28.96 575 40 L 575 380 C 575 391.04 566.04 400 555 400 L 40 400 C 28.96 400 20 391.04 20 380 L 20 40 C 20 28.96 28.96 20 40 20 Z',
+    {
+      x: 0,
+      y: 420,
+      borderWidth: 3,
+      borderColor: blackColor,
+    }
+  );
+
+  // 1. Organization Text Header (Center)
+  const titleText = "TRUSTCARE";
+  const titleWidth = boldFont.widthOfTextAtSize(titleText, 26);
+  page.drawText(titleText, {
+    x: (595 - titleWidth) / 2,
+    y: 350,
+    size: 26,
+    font: boldFont,
+    color: darkGreen,
   });
 
+  const subTitleText = "INSTITUTE OF HEALTH SCIENCE";
+  const subTitleWidth = boldFont.widthOfTextAtSize(subTitleText, 12);
+  page.drawText(subTitleText, {
+    x: (595 - subTitleWidth) / 2,
+    y: 334,
+    size: 12,
+    font: boldFont,
+    color: darkGreen,
+  });
+
+  // 2. Receipt Badge (Pill Shape Box)
+  const badgeTextWidth = boldFont.widthOfTextAtSize(badgeLabel, 9);
+  const badgeBoxWidth = badgeTextWidth + 24;
+  const badgeCenterX = 297.5;
+  const badgeLeftCircleX = badgeCenterX - (badgeBoxWidth / 2) + 8;
+  const badgeRightCircleX = badgeCenterX + (badgeBoxWidth / 2) - 8;
+  
+  // Draw filled pill shape background using circles + rect
+  page.drawCircle({ x: badgeLeftCircleX, y: 316, size: 8, color: blackColor });
+  page.drawCircle({ x: badgeRightCircleX, y: 316, size: 8, color: blackColor });
+  page.drawRectangle({
+    x: badgeLeftCircleX,
+    y: 308,
+    width: badgeRightCircleX - badgeLeftCircleX,
+    height: 16,
+    color: blackColor,
+  });
+  
   // Badge text in white
   page.drawText(badgeLabel, {
-    x: (595 - badgeWidth) / 2,
-    y: 702,
-    size: 12,
+    x: badgeCenterX - (badgeTextWidth / 2),
+    y: 312,
+    size: 9,
     font: boldFont,
     color: rgb(1, 1, 1),
   });
 
-  // Helper to draw structured grid lines & fields
-  let currentY = 650;
-  const drawFieldRow = (label1: string, val1: string, label2: string, val2: string) => {
-    // Label 1
-    page.drawText(label1, { x: 50, y: currentY, size: 10, font: boldFont, color: rgb(0.3, 0.3, 0.3) });
-    page.drawText(val1, { x: 160, y: currentY, size: 10, font: font, color: rgb(0.1, 0.1, 0.1) });
-    // Underline 1
-    page.drawLine({ start: { x: 155, y: currentY - 3 }, end: { x: 285, y: currentY - 3 }, thickness: 0.5, color: rgb(0.7, 0.7, 0.7) });
-
-    // Label 2
-    page.drawText(label2, { x: 310, y: currentY, size: 10, font: boldFont, color: rgb(0.3, 0.3, 0.3) });
-    page.drawText(val2, { x: 410, y: currentY, size: 10, font: font, color: rgb(0.1, 0.1, 0.1) });
-    // Underline 2
-    page.drawLine({ start: { x: 405, y: currentY - 3 }, end: { x: 545, y: currentY - 3 }, thickness: 0.5, color: rgb(0.7, 0.7, 0.7) });
-
-    currentY -= 30;
-  };
-
-  const drawSingleFieldRow = (label: string, val: string) => {
-    page.drawText(label, { x: 50, y: currentY, size: 10, font: boldFont, color: rgb(0.3, 0.3, 0.3) });
-    page.drawText(val, { x: 160, y: currentY, size: 10, font: font, color: rgb(0.1, 0.1, 0.1) });
-    page.drawLine({ start: { x: 155, y: currentY - 3 }, end: { x: 545, y: currentY - 3 }, thickness: 0.5, color: rgb(0.7, 0.7, 0.7) });
-    currentY -= 30;
-  };
-
-  // Draw common metadata fields
-  drawFieldRow("Receipt No:", receiptNo, "Date:", date);
-  drawSingleFieldRow("Student Name:", studentName);
-  drawFieldRow("Course Name:", courseName, "Payment Mode:", paymentMode);
-
-  // Type specific rows
-  if (type === 'admission') {
-    drawFieldRow("Duration:", data.courseDuration || '1 Year', "Enrollment ID:", data.enrollmentId || 'N/A');
-  } else if (type === 'installment') {
-    drawFieldRow("Installment No:", `#${data.installmentNumber || 1}`, "Enrollment ID:", data.enrollmentId || 'N/A');
-    drawFieldRow("Paid So Far:", `Rs. ${(data.totalPaidSoFar || 0).toLocaleString('en-IN')}`, "Balance Due:", `Rs. ${(data.balanceDue || 0).toLocaleString('en-IN')}`);
-  } else if (type === 'exam') {
-    drawFieldRow("Purpose:", "Exam Registration Fee", "Enrollment ID:", data.enrollmentId || 'N/A');
-  }
-
-  // Draw large Amount Paid callout box
-  currentY -= 20;
-  page.drawRectangle({
-    x: 50,
-    y: currentY - 40,
-    width: 495,
-    height: 50,
-    color: rgb(0.95, 0.98, 0.98),
-    borderColor: rgb(0.05, 0.58, 0.53),
-    borderWidth: 1.5,
-  });
-
-  page.drawText("TOTAL AMOUNT PAID:", {
-    x: 70,
-    y: currentY - 20,
-    size: 11,
+  // 3. Student Copy Label
+  const copyLabel = "STUDENT COPY";
+  const copyWidth = boldFont.widthOfTextAtSize(copyLabel, 8);
+  page.drawText(copyLabel, {
+    x: (595 - copyWidth) / 2,
+    y: 298,
+    size: 8,
     font: boldFont,
-    color: rgb(0.3, 0.3, 0.3),
+    color: grayColor,
   });
 
-  const amtText = `INR ${amountPaid}/-`;
-  const amtTextWidth = boldFont.widthOfTextAtSize(amtText, 16);
-  page.drawText(amtText, {
-    x: 520 - amtTextWidth,
-    y: currentY - 22,
-    size: 16,
-    font: boldFont,
-    color: rgb(0.05, 0.58, 0.53),
-  });
-
-  // Footer terms box
-  currentY -= 120;
-  page.drawRectangle({
-    x: 50,
-    y: currentY - 50,
-    width: 495,
-    height: 70,
-    color: rgb(0.98, 0.95, 0.95),
-    borderColor: rgb(0.8, 0.3, 0.3),
-    borderWidth: 0.5,
-  });
-
-  page.drawText("TERMS & CONDITIONS:", {
-    x: 65,
-    y: currentY + 6,
-    size: 9,
-    font: boldFont,
-    color: rgb(0.6, 0.1, 0.1),
-  });
-
-  const termLines = [
-    "• Course Fees, Once Paid Cannot Be Refunded.",
-    "• After Admission Is Completed, Cancellation Is Not Allowed.",
-    "• Please verify details. Call the office for any billing query."
-  ];
-  let termY = currentY - 8;
-  for (const line of termLines) {
-    page.drawText(line, {
-      x: 65,
-      y: termY,
-      size: 8.5,
-      font: font,
-      color: rgb(0.4, 0.2, 0.2),
+  // Checkbox drawer
+  const drawCheckbox = (x: number, y: number, checked: boolean) => {
+    page.drawRectangle({
+      x: x,
+      y: y - 1,
+      width: 12,
+      height: 12,
+      borderWidth: 1.5,
+      borderColor: blackColor,
+      color: rgb(1, 1, 1),
     });
-    termY -= 12;
-  }
+    if (checked) {
+      page.drawLine({ start: { x: x + 2.5, y: y + 4.5 }, end: { x: x + 5.5, y: y + 1.5 }, thickness: 2.2, color: blackColor });
+      page.drawLine({ start: { x: x + 5.5, y: y + 1.5 }, end: { x: x + 9.5, y: y + 9.5 }, thickness: 2.2, color: blackColor });
+    }
+  };
 
-  // Signatures
-  currentY -= 130;
-  page.drawLine({ start: { x: 50, y: currentY }, end: { x: 200, y: currentY }, thickness: 1, color: rgb(0.5, 0.5, 0.5) });
-  page.drawText("Trainee Signature", { x: 75, y: currentY - 15, size: 9, font: boldFont, color: rgb(0.4, 0.4, 0.4) });
+  // Indian Rupee Symbol Drawer
+  const drawRupee = (x: number, y: number) => {
+    const thickness = 1.1;
+    // Vertical stem of the upper loop only
+    page.drawLine({ start: { x: x + 1.5, y: y + 4.5 }, end: { x: x + 1.5, y: y + 7.5 }, thickness, color: blackColor });
+    // Horizontal bar 1
+    page.drawLine({ start: { x, y: y + 7.5 }, end: { x: x + 7, y: y + 7.5 }, thickness, color: blackColor });
+    // Horizontal bar 2
+    page.drawLine({ start: { x, y: y + 4.5 }, end: { x: x + 6, y: y + 4.5 }, thickness, color: blackColor });
+    // Upper loop (diagonal segments)
+    page.drawLine({ start: { x: x + 1.5, y: y + 7.5 }, end: { x: x + 5.5, y: y + 6 }, thickness, color: blackColor });
+    page.drawLine({ start: { x: x + 5.5, y: y + 6 }, end: { x: x + 1.5, y: y + 4.5 }, thickness, color: blackColor });
+    // Diagonal leg slanted down-right
+    page.drawLine({ start: { x: x + 1.8, y: y + 4.5 }, end: { x: x + 5.5, y: y }, thickness, color: blackColor });
+  };
 
-  page.drawLine({ start: { x: 395, y: currentY }, end: { x: 545, y: currentY }, thickness: 1, color: rgb(0.5, 0.5, 0.5) });
-  page.drawText("Authorized Signatory", { x: 415, y: currentY - 15, size: 9, font: boldFont, color: rgb(0.4, 0.4, 0.4) });
+  // 4. Receipt No & Date
+  page.drawText("Receipt No.", { x: 45, y: 265, size: 10, font: boldFont });
+  page.drawText(receiptNo, { x: 115, y: 265, size: 10, font: font });
+  page.drawLine({ start: { x: 110, y: 262 }, end: { x: 290, y: 262 }, thickness: 1, color: blackColor });
 
-  // Save document bytes
+  page.drawText("Date :", { x: 305, y: 265, size: 10, font: boldFont });
+  page.drawText(date, { x: 345, y: 265, size: 10, font: font });
+  page.drawLine({ start: { x: 340, y: 262 }, end: { x: 550, y: 262 }, thickness: 1, color: blackColor });
+
+  // 5. Student Name
+  page.drawText("Student Name :", { x: 45, y: 237, size: 10, font: boldFont });
+  page.drawText(studentName, { x: 130, y: 237, size: 10, font: font });
+  page.drawLine({ start: { x: 125, y: 234 }, end: { x: 550, y: 234 }, thickness: 1, color: blackColor });
+
+  // 6. Course Name
+  page.drawText("Course Name :", { x: 45, y: 209, size: 10, font: boldFont });
+  page.drawText(courseName, { x: 130, y: 209, size: 10, font: font });
+  page.drawLine({ start: { x: 125, y: 206 }, end: { x: 550, y: 206 }, thickness: 1, color: blackColor });
+
+  // 7. Purpose To Pay Checkboxes
+  page.drawText("Purpose To Pay :", { x: 45, y: 181, size: 10, font: boldFont });
+  
+  page.drawText("Admission Fee's", { x: 145, y: 181, size: 10, font: font });
+  drawCheckbox(220, 181, isAdmission);
+
+  page.drawText("Course Fee's", { x: 245, y: 181, size: 10, font: font });
+  drawCheckbox(305, 181, isCourse);
+
+  page.drawText("Exam Fee's", { x: 330, y: 181, size: 10, font: font });
+  drawCheckbox(385, 181, isExam);
+
+  // 8. Financials: Total Amount, Paid Amt, Balance Amt
+  page.drawText("Total Amount :", { x: 45, y: 153, size: 10, font: boldFont });
+  drawRupee(120, 153);
+  page.drawText(totalFees.toLocaleString('en-IN'), { x: 128, y: 153, size: 10, font: font });
+  page.drawLine({ start: { x: 115, y: 150 }, end: { x: 210, y: 150 }, thickness: 1, color: blackColor });
+
+  page.drawText("Paid Amt. :", { x: 225, y: 153, size: 10, font: boldFont });
+  drawRupee(285, 153);
+  page.drawText(amountPaid.toLocaleString('en-IN'), { x: 293, y: 153, size: 10, font: font });
+  page.drawLine({ start: { x: 280, y: 150 }, end: { x: 375, y: 150 }, thickness: 1, color: blackColor });
+
+  page.drawText("Balance Amt :", { x: 390, y: 153, size: 10, font: boldFont });
+  drawRupee(460, 153);
+  page.drawText(balanceDue.toLocaleString('en-IN'), { x: 468, y: 153, size: 10, font: font });
+  page.drawLine({ start: { x: 455, y: 150 }, end: { x: 550, y: 150 }, thickness: 1, color: blackColor });
+
+  // 9. Received By
+  page.drawText("Received By :", { x: 45, y: 125, size: 10, font: boldFont });
+  page.drawText(receivedBy, { x: 120, y: 125, size: 10, font: font });
+  page.drawLine({ start: { x: 115, y: 122 }, end: { x: 300, y: 122 }, thickness: 1, color: blackColor });
+
+  // 10. Mode of Payment Checkboxes (Pill shape box for label + checkboxes next to it)
+  // Draw filled pill shape for "MODE OF PAYMENT:"
+  page.drawCircle({ x: 52, y: 99, size: 7, color: blackColor });
+  page.drawCircle({ x: 148, y: 99, size: 7, color: blackColor });
+  page.drawRectangle({
+    x: 52,
+    y: 92,
+    width: 96,
+    height: 14,
+    color: blackColor,
+  });
+  page.drawText("MODE OF PAYMENT:", {
+    x: 52,
+    y: 96,
+    size: 7.5,
+    font: boldFont,
+    color: rgb(1, 1, 1),
+  });
+
+  // Checkboxes
+  page.drawText("Cash", { x: 170, y: 95, size: 10, font: font });
+  drawCheckbox(200, 95, isCash);
+
+  page.drawText("Online", { x: 225, y: 95, size: 10, font: font });
+  drawCheckbox(260, 95, isOnline);
+
+  page.drawText("Cheque", { x: 285, y: 95, size: 10, font: font });
+  drawCheckbox(325, 95, isCheque);
+
+  // 11. Terms & Conditions Notes (Left bottom, exact text matching)
+  page.drawText("• Course Fees, Once Paid Cannot Be Refunded.", { x: 45, y: 56, size: 8, font: font, color: blackColor });
+  page.drawText("• After Admission Is Completed Cancellation. Is Not Allowed.", { x: 45, y: 44, size: 8, font: font, color: blackColor });
+
+  // 12. Signature Area (Right bottom, exact matching)
+  page.drawText("Authority Sign./Stamp  ..........................", { x: 395, y: 44, size: 9, font: boldFont, color: blackColor });
+
   const bytes = await pdfDoc.save();
   return Buffer.from(bytes);
 }
@@ -382,7 +437,7 @@ export async function POST(req: Request) {
     }
 
     const fromEmail = process.env.EMAIL_FROM || "trustcareinstitute03@gmail.com";
-    const subject = `TrustCare Receipt - ${data.receiptNo || 'Transaction Alert'}`;
+    const subject = `Trustcare Institute Of Health Science Receipt - ${data.receiptNo || 'Transaction Alert'}`;
     const htmlContent = generateEmailTemplate(type, data);
 
     // Generate PDF copy of the receipt
@@ -425,7 +480,7 @@ export async function POST(req: Request) {
         ],
         from: {
           email: fromEmail,
-          name: "TrustCare Institute",
+          name: "Trustcare Institute Of Health Science",
         },
         content: [
           {
