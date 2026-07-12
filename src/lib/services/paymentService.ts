@@ -455,7 +455,7 @@ export async function getFeeStructureData(branchFilter?: string) {
     const paymentModeCounts: { [key: string]: number } = {};
 
     querySnapshot.forEach((docSnap) => {
-      const row = { id: docSnap.id, ...docSnap.data() } as any;
+      const row = { ...docSnap.data(), id: docSnap.id } as any;
       data.push(row);
 
       totalAdmissionFees += Number(row.admissionFee || 0);

@@ -111,10 +111,7 @@ export default function PaymentView({
   useEffect(() => {
     if (initialEnrollmentId) {
       setEnrollmentId(initialEnrollmentId);
-      setStudentName(initialStudentName || "");
-      setCourseName(initialCourseName || "");
-      setReceiptNo(initialReceiptNo || "");
-      checkExistingSchedule(initialEnrollmentId);
+      handleEnrollmentSearch(initialEnrollmentId);
     }
   }, [initialEnrollmentId]);
 
@@ -143,13 +140,14 @@ export default function PaymentView({
     }
   };
 
-  const handleEnrollmentSearch = async () => {
-    if (!enrollmentId.trim()) return;
+  const handleEnrollmentSearch = async (idOverride?: string | React.MouseEvent) => {
+    const searchId = typeof idOverride === 'string' ? idOverride : enrollmentId;
+    if (!searchId.trim()) return;
     setLoading(true);
     setErrorMsg("");
     setSuccessMsg("");
     try {
-      const res = await getStudentDataByEnrollmentId(enrollmentId.trim());
+      const res = await getStudentDataByEnrollmentId(searchId.trim());
       if (res.success && res.studentName) {
         setStudentName(res.studentName);
         setCourseName(res.courseName);
@@ -162,7 +160,7 @@ export default function PaymentView({
         if (res.totalCourseFees) setDbTotalFees(res.totalCourseFees);
         if (res.guardianName) setGuardianName(res.guardianName);
         if (res.guardianRelation) setGuardianRelation(res.guardianRelation);
-        await checkExistingSchedule(enrollmentId.trim());
+        await checkExistingSchedule(searchId.trim());
       } else {
         setErrorMsg("Enrollment ID not found in database.");
       }
@@ -329,47 +327,6 @@ export default function PaymentView({
       if (res.success) {
         setSuccessMsg(`Installment ${inst.installmentNumber} recorded successfully!`);
         await checkExistingSchedule(enrollmentId);
-
-        // Auto-send installment email if student email is available
-        if (studentEmail) {
-          try {
-            const updatedSchedule = schedule.map(s => s.installmentNumber === inst.installmentNumber ? { ...s, status: "Paid" as const } : s);
-            const paidUpToNow = updatedSchedule
-              .filter((s) => s.status === "Paid" && s.installmentNumber <= inst.installmentNumber)
-              .reduce((sum, s) => sum + s.amount, 0);
-            const allPaid = updatedSchedule
-              .filter((s) => s.status === "Paid")
-              .reduce((sum, s) => sum + s.amount, 0);
-            const totalPayable = updatedSchedule.reduce((sum, s) => sum + s.amount, 0) || totalFees;
-            const balanceDue = Math.max(0, totalPayable - allPaid);
-
-            await fetch("/api/send-email", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                to: studentEmail,
-                type: "installment",
-                data: {
-                  receiptNo: receiptNo || `IR-${enrollmentId}-${inst.installmentNumber}`,
-                  date: new Date().toLocaleDateString("en-GB"),
-                  studentName: studentName,
-                  courseName: courseName,
-                  installmentNumber: inst.installmentNumber,
-                  amountPaid: inst.amount,
-                  paymentMode: paymentMethod,
-                  receivedBy: userProfile?.username || "Authorized Officer",
-                  branch: branch.toUpperCase(),
-                  totalPaidSoFar: paidUpToNow,
-                  balanceDue: balanceDue,
-                  totalFees: totalPayable,
-                }
-              })
-            });
-            setEmailSentState(prev => ({ ...prev, [inst.installmentNumber]: true }));
-          } catch (mailErr) {
-            console.warn("Could not auto-send installment email:", mailErr);
-          }
-        }
       }
       else setErrorMsg(res.message || "Failed to record payment.");
     } catch (err: any) { setErrorMsg(err.message || "Error saving payment."); }
