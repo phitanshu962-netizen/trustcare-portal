@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { UserProfile } from "../lib/services/authService";
 import { db } from "../lib/firebase";
+import { normalizeEnrollmentId } from "../lib/utils";
 import { doc, getDoc } from "firebase/firestore";
 import {
   getStudentDataByEnrollmentId,
@@ -14,7 +15,6 @@ import {
 } from "../lib/services/paymentService";
 import { openCoursePaymentReceipt, openInstallmentReceipt } from "./CoursePaymentReceiptView";
 import {
-  CircleDollarSign,
   CheckCircle2,
   AlertCircle,
   Loader2,
@@ -26,6 +26,7 @@ import {
   Calendar,
   X
 } from "lucide-react";
+import { CircleIndianRupee } from "./CircleIndianRupee";
 
 interface PaymentViewProps {
   userProfile: UserProfile | null;
@@ -110,29 +111,31 @@ export default function PaymentView({
 
   useEffect(() => {
     if (initialEnrollmentId) {
-      setEnrollmentId(initialEnrollmentId);
+      const normalized = normalizeEnrollmentId(initialEnrollmentId);
+      setEnrollmentId(normalized);
       setStudentName(initialStudentName || "");
       setCourseName(initialCourseName || "");
       setReceiptNo(initialReceiptNo || "");
-      checkExistingSchedule(initialEnrollmentId);
+      checkExistingSchedule(normalized);
     }
   }, [initialEnrollmentId]);
 
   const checkExistingSchedule = async (id: string) => {
+    const normalized = normalizeEnrollmentId(id);
     setLoading(true);
     try {
-      const saved = await loadInstallmentSchedule(id);
+      const saved = await loadInstallmentSchedule(normalized);
       if (saved && saved.length > 0) {
         setSchedule(saved);
         setLocked(true);
         setConfirmed(true);
         setPaymentType(saved.length === 1 ? "full" : "emi");
-        const firstDoc = await getStudentDataByEnrollmentId(id);
+        const firstDoc = await getStudentDataByEnrollmentId(normalized);
         if (firstDoc.success) {
           setBranch(firstDoc.branch || userProfile?.branch || "MAIN");
           setStudentEmail(firstDoc.email || "");
           setPhotoUrl(firstDoc.photoUrl || "");
-          const hist = await getInstallmentPaymentsForStudent(id);
+          const hist = await getInstallmentPaymentsForStudent(normalized);
           if (hist) setPaymentMethod(hist.paymentMethod || "Cash");
         }
       }
@@ -144,12 +147,15 @@ export default function PaymentView({
   };
 
   const handleEnrollmentSearch = async () => {
-    if (!enrollmentId.trim()) return;
+    const trimmedId = enrollmentId.trim();
+    if (!trimmedId) return;
+    const normalized = normalizeEnrollmentId(trimmedId);
+    setEnrollmentId(normalized);
     setLoading(true);
     setErrorMsg("");
     setSuccessMsg("");
     try {
-      const res = await getStudentDataByEnrollmentId(enrollmentId.trim());
+      const res = await getStudentDataByEnrollmentId(normalized);
       if (res.success && res.studentName) {
         setStudentName(res.studentName);
         setCourseName(res.courseName);
@@ -162,7 +168,7 @@ export default function PaymentView({
         if (res.totalCourseFees) setDbTotalFees(res.totalCourseFees);
         if (res.guardianName) setGuardianName(res.guardianName);
         if (res.guardianRelation) setGuardianRelation(res.guardianRelation);
-        await checkExistingSchedule(enrollmentId.trim());
+        await checkExistingSchedule(normalized);
       } else {
         setErrorMsg("Enrollment ID not found in database.");
       }
@@ -514,7 +520,7 @@ export default function PaymentView({
       <div className="absolute bottom-0 left-0 -z-10 h-32 w-32 bg-indigo-500/10 blur-2xl rounded-full" />
       <div className="border-b border-slate-900 pb-4 mb-6 text-center">
         <h1 className="text-2xl sm:text-3xl font-extrabold bg-gradient-to-r from-teal-600 to-indigo-600 bg-clip-text text-transparent flex items-center justify-center gap-3">
-          <CircleDollarSign className="h-7 w-7 text-teal-400" />COURSE PAYMENT
+          <CircleIndianRupee className="h-7 w-7 text-teal-400" />COURSE PAYMENT
         </h1>
       </div>
 
@@ -550,7 +556,7 @@ export default function PaymentView({
               value={enrollmentId}
               onChange={(e) => setEnrollmentId(e.target.value)}
               className="flex-1 bg-slate-950/80 border border-slate-850 rounded-xl px-4 py-2 text-sm text-slate-100 placeholder-slate-700 focus:outline-none focus:border-teal-500/50 font-medium"
-              placeholder="e.g. TCHS001"
+              placeholder="e.g. TCIHS001"
               disabled={locked}
             />
             {!locked && (

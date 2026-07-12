@@ -10,7 +10,8 @@ import {
   loginWithGoogle
 } from "../lib/services/authService";
 import { InquiryData } from "../lib/services/inquiryService";
-import { Lock, User, Loader2, LogOut, Menu, X, Receipt, FileText, UserPlus, CircleDollarSign, GraduationCap, TrendingUp, BarChart3, Clock, Award } from "lucide-react";
+import { Lock, User, Loader2, LogOut, Menu, X, ReceiptIndianRupee, FileText, UserPlus, GraduationCap, TrendingUp, BarChart3, Clock, Award } from "lucide-react";
+import { CircleIndianRupee } from "../components/CircleIndianRupee";
 
 // UI Components
 import Sidebar from "../components/Sidebar";
@@ -235,8 +236,8 @@ export default function Home() {
   const navItems = [
     { id: "inquiry", label: "New Inquiry", icon: FileText },
     { id: "admission", label: "New Admission", icon: UserPlus },
-    { id: "payment", label: "Course Payment", icon: CircleDollarSign },
-    { id: "exam-receipt", label: "Exam Receipt", icon: Receipt }
+    { id: "payment", label: "Course Payment", icon: CircleIndianRupee },
+    { id: "exam-receipt", label: "Exam Receipt", icon: ReceiptIndianRupee }
   ];
 
   const adminItems = [

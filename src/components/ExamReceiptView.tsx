@@ -7,8 +7,9 @@ import {
   ExamReceiptData
 } from "../lib/services/paymentService";
 import { getCourse } from "../lib/services/courseService";
+import { normalizeEnrollmentId } from "../lib/utils";
 import {
-  Receipt,
+  ReceiptIndianRupee,
   Loader2,
   Search,
   CheckCircle2,
@@ -92,9 +93,11 @@ export default function ExamReceiptView({ userProfile, onGoBack }: ExamReceiptVi
     const trimmedId = enrollmentId.trim();
     if (!trimmedId) return;
 
+    const normalized = normalizeEnrollmentId(trimmedId);
+    setEnrollmentId(normalized);
     showNotification("Fetching student data...", "info");
     try {
-      const res = await getStudentDataByEnrollmentId(trimmedId);
+      const res = await getStudentDataByEnrollmentId(normalized);
       if (res.success) {
         setStudentName(res.studentName || "");
         setCourseName(res.courseName || "");
@@ -765,7 +768,7 @@ export default function ExamReceiptView({ userProfile, onGoBack }: ExamReceiptVi
       {/* Header */}
       <div className="border-b border-slate-900 pb-4 mb-6 text-center">
         <h1 className="text-2xl sm:text-3xl font-extrabold bg-gradient-to-r from-teal-600 to-indigo-600 bg-clip-text text-transparent flex items-center justify-center gap-3">
-          <Receipt className="h-7 w-7 text-teal-400" />EXAM FEE RECEIPT
+          <ReceiptIndianRupee className="h-7 w-7 text-teal-400" />EXAM FEE RECEIPT
         </h1>
       </div>
 
@@ -789,7 +792,7 @@ export default function ExamReceiptView({ userProfile, onGoBack }: ExamReceiptVi
                 value={enrollmentId}
                 onChange={(e) => setEnrollmentId(e.target.value)}
                 onBlur={handleEnrollmentIdBlur}
-                placeholder="Enter Student Enrollment ID (e.g. TCHS001)"
+                placeholder="Enter Student Enrollment ID (e.g. TCIHS001)"
                 className="w-full bg-slate-950/80 border border-slate-850 focus:border-teal-500/50 rounded-xl pl-4 pr-10 py-2.5 text-sm text-slate-100 placeholder-slate-700 focus:outline-none transition-colors font-medium"
                 required
               />

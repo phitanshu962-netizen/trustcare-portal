@@ -259,13 +259,13 @@ export default function AdmissionView({
         let maxNum = 0;
         admissionsSnapshot.forEach((docSnap) => {
           const id = docSnap.id;
-          const match = id.match(/^TCHS(\d+)$/i);
+          const match = id.match(/^(?:TCHS|TCIHS)(\d+)$/i);
           if (match) {
             const num = parseInt(match[1], 10);
             if (num > maxNum) maxNum = num;
           }
         });
-        const nextEnrollment = "TCHS" + String(maxNum + 1).padStart(3, "0");
+        const nextEnrollment = "TCIHS" + String(maxNum + 1).padStart(3, "0");
         setEnrollmentId(nextEnrollment);
       } catch (err) {
         console.error("Error loading IDs:", err);

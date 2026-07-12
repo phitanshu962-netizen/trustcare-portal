@@ -18,7 +18,6 @@ import {
   Copy, 
   FileSpreadsheet, 
   Plus, 
-  CircleDollarSign, 
   Info, 
   ChevronLeft, 
   ChevronRight, 
@@ -30,6 +29,7 @@ import {
   ArrowUpDown,
   Trash2
 } from "lucide-react";
+import { CircleIndianRupee } from "./CircleIndianRupee";
 
 interface AnalyticsViewProps {
   userProfile: UserProfile | null;
@@ -977,7 +977,7 @@ export default function AnalyticsView({
                           onClick={() => onCoursePayment(row.enrollmentId, row.studentName, row.courseName, row.totalCourseFees, row.branch)}
                           className="px-2.5 py-1 bg-gradient-to-r from-teal-500/10 to-indigo-500/10 border border-teal-500/25 text-teal-400 hover:opacity-90 active:scale-95 transition-all rounded-lg font-bold text-[10px] flex items-center gap-1.5 cursor-pointer hover-lift"
                         >
-                          <CircleDollarSign className="h-3.5 w-3.5 text-teal-450" /> Course Pay
+                          <CircleIndianRupee className="h-3.5 w-3.5 text-teal-450" /> Course Pay
                         </button>
                         {userProfile?.role === "admin" && (
                           <button

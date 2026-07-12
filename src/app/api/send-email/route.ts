@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import fs from 'fs';
 import path from 'path';
+// @ts-ignore
+import * as fontkit from 'fontkit';
 
 // Force Node.js runtime so pdf-lib (which uses Buffer/Uint8Array) works correctly
 export const runtime = 'nodejs';
@@ -9,11 +11,25 @@ export const runtime = 'nodejs';
 
 async function generatePdfReceiptBuffer(type: string, data: any): Promise<Buffer> {
   const pdfDoc = await PDFDocument.create();
+  pdfDoc.registerFontkit(fontkit);
+
   const page = pdfDoc.addPage([595, 420]); // A5 Landscape Size (in points: 595 x 420)
 
   // Use Times-Roman (Serif) fonts to match the browser fonts exactly
   const font = await pdfDoc.embedFont(StandardFonts.TimesRoman);
   const boldFont = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
+
+  // Load Geist-Regular font for rendering the Unicode Indian Rupee symbol
+  let rupeeFont: any = null;
+  try {
+    const fontPath = path.join(process.cwd(), 'node_modules', 'next', 'dist', 'compiled', '@vercel', 'og', 'Geist-Regular.ttf');
+    if (fs.existsSync(fontPath)) {
+      const fontBytes = fs.readFileSync(fontPath);
+      rupeeFont = await pdfDoc.embedFont(fontBytes);
+    }
+  } catch (err) {
+    console.error("Error embedding Geist font for Rupee symbol:", err);
+  }
 
   const studentName = data.studentName || 'Student';
   const receiptNo = data.receiptNo || 'N/A';
@@ -184,20 +200,27 @@ async function generatePdfReceiptBuffer(type: string, data: any): Promise<Buffer
     }
   };
 
-  // Indian Rupee Symbol Drawer
+  // Indian Rupee Symbol Drawer (using custom embedded Geist font or SVG path fallback)
   const drawRupee = (x: number, y: number) => {
-    const thickness = 1.1;
-    // Vertical stem of the upper loop only
-    page.drawLine({ start: { x: x + 1.5, y: y + 4.5 }, end: { x: x + 1.5, y: y + 7.5 }, thickness, color: blackColor });
-    // Horizontal bar 1
-    page.drawLine({ start: { x, y: y + 7.5 }, end: { x: x + 7, y: y + 7.5 }, thickness, color: blackColor });
-    // Horizontal bar 2
-    page.drawLine({ start: { x, y: y + 4.5 }, end: { x: x + 6, y: y + 4.5 }, thickness, color: blackColor });
-    // Upper loop (diagonal segments)
-    page.drawLine({ start: { x: x + 1.5, y: y + 7.5 }, end: { x: x + 5.5, y: y + 6 }, thickness, color: blackColor });
-    page.drawLine({ start: { x: x + 5.5, y: y + 6 }, end: { x: x + 1.5, y: y + 4.5 }, thickness, color: blackColor });
-    // Diagonal leg slanted down-right
-    page.drawLine({ start: { x: x + 1.8, y: y + 4.5 }, end: { x: x + 5.5, y: y }, thickness, color: blackColor });
+    if (rupeeFont) {
+      page.drawText('₹', {
+        x: x,
+        y: y,
+        size: 10,
+        font: rupeeFont,
+        color: blackColor,
+      });
+    } else {
+      page.drawSvgPath(
+        'M 1 1 L 7 1 M 1 4 L 6 4 M 2.5 1 C 5.5 1 5.5 4 2.5 4 L 2.5 1 M 2.5 4 L 6 9',
+        {
+          x: x,
+          y: y + 9,
+          borderWidth: 1.2,
+          borderColor: blackColor,
+        }
+      );
+    }
   };
 
   // 4. Receipt No & Date

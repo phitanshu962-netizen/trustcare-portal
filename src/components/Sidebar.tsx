@@ -1,10 +1,10 @@
 import React from "react";
 import { UserProfile } from "../lib/services/authService";
+import { normalizeEnrollmentId } from "../lib/utils";
 import {
   FileText,
   UserPlus,
-  CircleDollarSign,
-  Receipt,
+  ReceiptIndianRupee,
   GraduationCap,
   TrendingUp,
   BarChart3,
@@ -35,13 +35,15 @@ export default function Sidebar({
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (onSearchStudentId && searchId.trim()) {
-      onSearchStudentId(searchId.trim());
+      const normalized = normalizeEnrollmentId(searchId);
+      setSearchId(normalized);
+      onSearchStudentId(normalized);
     }
   };
 
   const navItems = [
     { id: "inquiry", label: "New Inquiry", icon: FileText },
-    { id: "exam-receipt", label: "Exam Receipt", icon: Receipt }
+    { id: "exam-receipt", label: "Exam Receipt", icon: ReceiptIndianRupee }
   ];
 
   const adminItems = [
@@ -97,7 +99,7 @@ export default function Sidebar({
                 value={searchId}
                 onChange={(e) => setSearchId(e.target.value)}
                 className="w-full bg-slate-950/80 border border-slate-850 rounded-xl pl-3 pr-9 py-2 text-xs text-slate-100 placeholder-slate-700 focus:outline-none focus:border-teal-500/50 transition-colors font-medium"
-                placeholder="e.g. TCHS001"
+                placeholder="e.g. TCIHS001"
               />
               <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-teal-400 transition-colors">
                 <Search className="h-3.5 w-3.5" />
