@@ -64,7 +64,7 @@ export default function Sidebar({
       <div className="px-6 py-6 border-b border-slate-900 bg-slate-950/20 flex flex-col items-center justify-center">
         <div className="mb-3 flex items-center justify-center">
           <div className="flex h-36 w-36 items-center justify-center overflow-hidden rounded-xl bg-white p-1">
-            <img src="/TrustCareLogo.avif" alt="TrustCare Logo" className="w-full h-full object-contain" />
+            <img src="/TrustCareLogo.png" alt="TrustCare Logo" className="w-full h-full object-contain" />
           </div>
         </div>
         <div className="text-center leading-tight">

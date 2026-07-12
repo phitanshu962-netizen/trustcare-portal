@@ -133,7 +133,7 @@ export default function ExamReceiptView({ userProfile, onGoBack }: ExamReceiptVi
 
   // Generate HTML for printer double receipt (same design as installment receipt)
   const printReceipt = (receiptNo: string, dateStr: string, name: string, course: string, amt: number, mode: string, studentBranch: string) => {
-    const logoBase64 = "/TrustCareLogo.avif";
+    const logoBase64 = "/TrustCareLogo.png";
     const courseLabel = course.replace(/_/g, " ").toUpperCase();
     const formattedAmount = "₹" + amt.toLocaleString("en-IN");
 

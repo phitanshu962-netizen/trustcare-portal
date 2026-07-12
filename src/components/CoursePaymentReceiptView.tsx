@@ -74,7 +74,7 @@ export function openInstallmentReceipt(params: {
   balanceDue?: number;
   isAdmission?: boolean;
 }) {
-  const logoBase64 = "/TrustCareLogo.avif";
+  const logoBase64 = "/TrustCareLogo.png";
   const courseLabel = params.courseName.replace(/_/g, " ").toUpperCase();
 
   const receiptHTML = `<!DOCTYPE html>
@@ -553,7 +553,7 @@ export function openInstallmentReceipt(params: {
 }
 
 export function openCoursePaymentReceipt(data: ReceiptData) {
-  const logoBase64 = "/TrustCareLogo.avif";
+  const logoBase64 = "/TrustCareLogo.png";
   const courseLabel = data.courseName.replace(/_/g, " ").toUpperCase();
 
   const paidInstallments = data.schedule.filter((inst) => inst.status === "Paid");

@@ -284,7 +284,7 @@ export default function Home() {
             <div className="flex items-center gap-2.5">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white overflow-hidden shrink-0">
                 <img
-                  src="/TrustCareLogo.avif"
+                  src="/TrustCareLogo.png"
                   alt="TrustCare Logo"
                   className="h-7 w-7 object-contain"
                 />
@@ -456,7 +456,7 @@ export default function Home() {
           <div className="flex justify-center mb-3">
             <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white shadow-lg overflow-hidden">
               <img
-                src="/TrustCareLogo.avif"
+                src="/TrustCareLogo.png"
                 alt="TrustCare Logo"
                 className="h-14 w-14 object-contain"
               />
