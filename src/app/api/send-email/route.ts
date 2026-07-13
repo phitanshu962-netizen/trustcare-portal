@@ -307,7 +307,6 @@ async function generatePdfReceiptBuffer(type: string, data: any): Promise<Buffer
   // 11. Terms & Conditions Notes (Left bottom, exact text matching)
   page.drawText("• Course Fees, Once Paid Cannot Be Refunded.", { x: 45, y: 56, size: 8, font: font, color: blackColor });
   page.drawText("• After Admission Is Completed Cancellation. Is Not Allowed.", { x: 45, y: 44, size: 8, font: font, color: blackColor });
-
   // 12. Signature Area (Right bottom, exact matching)
   page.drawText("Authority Sign./Stamp  ..........................", { x: 395, y: 44, size: 9, font: boldFont, color: blackColor });
 
@@ -326,9 +325,13 @@ function generateEmailTemplate(type: string, data: any): string {
 
   let receiptTypeLabel = '';
   let additionalRows = '';
+  let bodyHtml = '';
 
   if (type === 'admission') {
-    receiptTypeLabel = 'Admission Receipt';
+    receiptTypeLabel = 'Admission Confirmation';
+    bodyHtml = `Congratulations! Your admission at <strong>TrustCare Institute of Health Science</strong> is confirmed.
+      <br /><br />
+      We are pleased to welcome you to our community. Please find your admission receipt details below. We have also attached the printable PDF of your receipt to this email.`;
     additionalRows = `
       <tr style="border-bottom: 1px solid #f1f5f9;">
         <td style="padding: 10px 0; color: #64748b; font-weight: bold;">Admission Fee</td>
@@ -341,6 +344,7 @@ function generateEmailTemplate(type: string, data: any): string {
     `;
   } else if (type === 'installment') {
     receiptTypeLabel = `Installment Receipt #${data.installmentNumber || 1}`;
+    bodyHtml = `Thank you for your payment. We have successfully processed your transaction and generated your receipt. Please find the receipt details below. We have also attached a printable PDF copy of the receipt to this email.`;
     additionalRows = `
       <tr style="border-bottom: 1px solid #f1f5f9;">
         <td style="padding: 10px 0; color: #64748b; font-weight: bold;">Installment Number</td>
@@ -357,6 +361,7 @@ function generateEmailTemplate(type: string, data: any): string {
     `;
   } else if (type === 'exam') {
     receiptTypeLabel = 'Exam Fee Receipt';
+    bodyHtml = `Thank you for your payment. We have successfully processed your transaction and generated your receipt. Please find the receipt details below. We have also attached a printable PDF copy of the receipt to this email.`;
     additionalRows = `
       <tr style="border-bottom: 1px solid #f1f5f9;">
         <td style="padding: 10px 0; color: #64748b; font-weight: bold;">Purpose of Payment</td>
@@ -388,7 +393,7 @@ function generateEmailTemplate(type: string, data: any): string {
       <div style="padding: 32px 24px;">
         <p style="margin-top: 0; margin-bottom: 20px; font-size: 15px; line-height: 1.5;">Dear <strong>${studentName}</strong>,</p>
         <p style="margin-top: 0; margin-bottom: 24px; font-size: 14px; line-height: 1.5; color: #475569;">
-          Thank you for your payment. We have successfully processed your transaction and generated your receipt. Please find the receipt details below. We have also attached a printable PDF copy of the receipt to this email.
+          ${bodyHtml}
         </p>
         
         <!-- Receipt Table -->
@@ -420,7 +425,7 @@ function generateEmailTemplate(type: string, data: any): string {
         
         <!-- Footer Note -->
         <div style="background-color: #f8fafc; border-left: 4px solid #0d9488; padding: 12px 16px; border-radius: 0 8px 8px 0; font-size: 12px; line-height: 1.6; color: #475569; margin-bottom: 24px;">
-          <strong>Important Notice:</strong> Course fees, once paid, are non-refundable. After admission is completed, cancellation is not allowed. For any queries, please reach out to the institute office.
+          <strong>Important Notice:</strong> Fees, once paid, are non-refundable. If you want to cancel your admission, you must pay the full fees. For any queries, please reach out to the institute office.
         </div>
         
         <p style="margin: 0; font-size: 13px; color: #64748b;">
@@ -460,7 +465,10 @@ export async function POST(req: Request) {
     }
 
     const fromEmail = process.env.EMAIL_FROM || "trustcareinstitute03@gmail.com";
-    const subject = `Trustcare Institute Of Health Science Receipt - ${data.receiptNo || 'Transaction Alert'}`;
+    let subject = `Trustcare Institute Of Health Science Receipt - ${data.receiptNo || 'Transaction Alert'}`;
+    if (type === 'admission') {
+      subject = `Admission Confirmed! Congratulations ${data.studentName || ''} - Trustcare Institute Of Health Science`;
+    }
     const htmlContent = generateEmailTemplate(type, data);
 
     // Generate PDF copy of the receipt
@@ -468,7 +476,16 @@ export async function POST(req: Request) {
     try {
       const pdfBuffer = await generatePdfReceiptBuffer(type, data);
       const base64Content = pdfBuffer.toString('base64');
-      const filename = `receipt_${(data.receiptNo || 'details').replace(/\//g, '-')}.pdf`;
+      
+      let filename = `receipt_${(data.receiptNo || 'details').replace(/\//g, '-')}.pdf`;
+      if (data.studentName) {
+        const sanitizedStudentName = data.studentName
+          .replace(/[^a-zA-Z0-9\s-_]/g, '')
+          .trim()
+          .replace(/\s+/g, '_');
+        const sanitizedReceiptNo = (data.receiptNo || 'details').replace(/[\/\\]/g, '-');
+        filename = `${sanitizedStudentName}_${sanitizedReceiptNo}.pdf`;
+      }
 
       // SendGrid requires `content` (base64 encoded), `filename`, `type`, and `disposition`
       attachments.push({

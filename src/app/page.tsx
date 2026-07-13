@@ -62,11 +62,11 @@ export default function Home() {
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState("");
 
-  // Seed default users and listen to auth changes on mount
+  // Listen to auth changes on mount
   useEffect(() => {
     async function init() {
-      // Seed users in background
-      await seedDefaultUsers();
+      // Seed users in background (Commented out as database is already seeded and secure rules require authentication)
+      // await seedDefaultUsers();
 
       // Subscribe to Firebase auth updates
       const unsubscribe = subscribeToAuth((user, profile) => {
