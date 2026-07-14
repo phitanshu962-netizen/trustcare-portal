@@ -16,6 +16,7 @@ interface ReceiptData {
   guardianName?: string;
   guardianRelation?: string;
   photoUrl?: string;
+  receivedBy?: string;
 }
 
 const mrPoints = [
@@ -75,7 +76,8 @@ export function openInstallmentReceipt(params: {
   isAdmission?: boolean;
 }) {
   const logoBase64 = "/TrustCareLogo.png";
-  const courseLabel = params.courseName.replace(/_/g, " ").toUpperCase();
+  const courseLabel = params.courseName.toUpperCase();
+  const receivedByLabel = params.receivedBy.split(/[_.]/).map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(" ");
 
   const receiptHTML = `<!DOCTYPE html>
 <html lang="en">
@@ -249,18 +251,21 @@ export function openInstallmentReceipt(params: {
       color: #000;
       position: relative;
       z-index: 1;
+      width: 100%;
     }
     .field-label {
       white-space: nowrap;
       margin-right: 5px;
     }
     .field-underline {
-      flex: 1;
+
+
       border-bottom: 1.5px solid #000;
-      padding-bottom: 1px;
-      padding-left: 8px;
+      padding: 0 8px 1px 8px;
       font-weight: bold;
       color: #000;
+      text-align: center;
+      min-width: 50px;
     }
     .checkbox-box {
       width: 22px;
@@ -347,12 +352,12 @@ export function openInstallmentReceipt(params: {
           <div class="logo-container"><img class="logo-img" src="${logoBase64}" alt="Logo" /></div>
         </div>
         <div class="receipt-content">
-          <div class="field-row">
-            <div style="display: flex; width: 250px; align-items: flex-end;">
+          <div class="field-row" style="justify-content: space-between;">
+            <div style="display: flex; align-items: flex-end;">
               <span class="field-label">Receipt No.</span>
               <span class="field-underline">${params.receiptNo}</span>
             </div>
-            <div style="display: flex; width: 220px; align-items: flex-end; margin-left: 20px;">
+            <div style="display: flex; align-items: flex-end;">
               <span class="field-label">Date :</span>
               <span class="field-underline">${params.date}</span>
             </div>
@@ -399,9 +404,9 @@ export function openInstallmentReceipt(params: {
             </div>
           </div>
 
-          <div class="field-row" style="width: 350px;">
+          <div class="field-row">
             <span class="field-label">Received By :</span>
-            <span class="field-underline">${params.receivedBy}</span>
+            <span class="field-underline">${receivedByLabel}</span>
           </div>
 
           <div class="field-row" style="align-items: center; margin-top: 18px;">
@@ -446,12 +451,12 @@ export function openInstallmentReceipt(params: {
           <div class="logo-container"><img class="logo-img" src="${logoBase64}" alt="Logo" /></div>
         </div>
         <div class="receipt-content">
-          <div class="field-row">
-            <div style="display: flex; width: 250px; align-items: flex-end;">
+          <div class="field-row" style="justify-content: space-between;">
+            <div style="display: flex; align-items: flex-end;">
               <span class="field-label">Receipt No.</span>
               <span class="field-underline">${params.receiptNo}</span>
             </div>
-            <div style="display: flex; width: 220px; align-items: flex-end; margin-left: 20px;">
+            <div style="display: flex; align-items: flex-end;">
               <span class="field-label">Date :</span>
               <span class="field-underline">${params.date}</span>
             </div>
@@ -498,9 +503,9 @@ export function openInstallmentReceipt(params: {
             </div>
           </div>
 
-          <div class="field-row" style="width: 350px;">
+          <div class="field-row">
             <span class="field-label">Received By :</span>
-            <span class="field-underline">${params.receivedBy}</span>
+            <span class="field-underline">${receivedByLabel}</span>
           </div>
 
           <div class="field-row" style="align-items: center; margin-top: 18px;">
@@ -554,7 +559,8 @@ export function openInstallmentReceipt(params: {
 
 export function openCoursePaymentReceipt(data: ReceiptData) {
   const logoBase64 = "/TrustCareLogo.png";
-  const courseLabel = data.courseName.replace(/_/g, " ").toUpperCase();
+  const courseLabel = data.courseName.toUpperCase();
+  const receivedByLabel = (data.receivedBy || "Admin").split(/[_.]/).map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(" ");
 
   const paidInstallments = data.schedule.filter((inst) => inst.status === "Paid");
   const totalPaid = paidInstallments.reduce((acc, inst) => acc + inst.amount, 0);
@@ -747,10 +753,10 @@ export function openCoursePaymentReceipt(data: ReceiptData) {
     }
     .field-line {
       border-bottom: 1.5px solid #000;
-      flex: 1;
-      min-width: 60px;
-      padding-bottom: 1px;
+      padding: 0 8px 1px 8px;
       font-weight: 700;
+      text-align: center;
+      min-width: 50px;
     }
     .field-fixed-sm { border-bottom: 1.5px solid #000; display:inline-block; min-width:120px; padding: 0 4px; font-weight:700; }
     .field-fixed-md { border-bottom: 1.5px solid #000; display:inline-block; min-width:170px; padding: 0 4px; font-weight:700; }
@@ -869,7 +875,7 @@ export function openCoursePaymentReceipt(data: ReceiptData) {
       <!-- Exam Fees -->
       <div class="field-row">
         <span style="white-space:nowrap;">Exam Fees</span>
-        <span class="field-line">&nbsp;</span>
+        <span class="field-line">&nbsp;As Applicable</span>
       </div>
 
       <!-- Monthly Fee Schedule -->
@@ -886,14 +892,14 @@ export function openCoursePaymentReceipt(data: ReceiptData) {
       <div style="border-top:1.5px dashed #aaa;padding-top:10px;">
         <!-- English declaration -->
         <div style="font-size:12px;font-weight:700;line-height:1.7;margin-bottom:2px;color:#000;">
-          I Am Mr./Ms : <span style="border-bottom:1.5px solid #000;display:inline-block;min-width:160px;padding:0 4px;font-weight:700;">&nbsp;${data.guardianName || ""}</span>
+          I Am Mr./Ms : <span style="border-bottom:1.5px solid #000;display:inline-block;padding:0 4px;font-weight:700;min-width:30px;">&nbsp;${data.guardianName || ""}</span>
           &nbsp;Mother / Father / Husband / Sister / Brother of
-          <span style="border-bottom:1.5px solid #000;display:inline-block;min-width:140px;padding:0 4px;font-weight:700;">&nbsp;${data.studentName}</span>
+          <span style="border-bottom:1.5px solid #000;display:inline-block;padding:0 4px;font-weight:700;min-width:30px;">&nbsp;${data.studentName}</span>
           &nbsp;&#8212; I Agree with Terms And Condition.
         </div>
         <!-- Marathi declaration -->
         <div style="font-size:12px;font-weight:800;color:#000;line-height:1.7;font-family:'Times New Roman', Times, serif;">
-          &#2350;&#2366;.&#2358;&#2381;&#2352;&#2368;./&#2358;&#2381;&#2352;&#2368;&#2350;&#2340;&#2368; <span style="border-bottom:1.5px solid #000;display:inline-block;min-width:160px;padding:0 4px;font-weight:700;">&nbsp;${data.guardianName || ""}</span>
+          &#2350;&#2366;.&#2358;&#2381;&#2352;&#2368;./&#2358;&#2381;&#2352;&#2368;&#2350;&#2340;&#2368; <span style="border-bottom:1.5px solid #000;display:inline-block;padding:0 4px;font-weight:700;min-width:30px;">&nbsp;${data.guardianName || ""}</span>
           &#2310;&#2312; / &#2357;&#2337;&#2368;&#2354; / &#2346;&#2340;&#2381;&#2344;&#2368; / &#2348;&#2361;&#2368;&#2339; / &#2349;&#2366;&#2313; &mdash;
           &#2350;&#2354;&#2366; &#2360;&#2352;&#2381;&#2357; &#2309;&#2335;&#2368; &#2350;&#2306;&#2332;&#2369;&#2352; &#2310;&#2361;&#2375;&#2340;.
         </div>
@@ -976,15 +982,15 @@ export function openCoursePaymentReceipt(data: ReceiptData) {
       <div style="border-top:1.5px dashed #aaa;padding-top:10px;">
         <!-- English declaration -->
         <div style="font-size:12px;font-weight:700;line-height:1.7;margin-bottom:2px;color:#000;">
-          I Am Mr./Ms : <span style="border-bottom:1.5px solid #000;display:inline-block;min-width:160px;padding:0 4px;font-weight:700;">&nbsp;${data.guardianName || ""}</span>
+          I Am Mr./Ms : <span style="border-bottom:1.5px solid #000;display:inline-block;padding:0 4px;font-weight:700;min-width:30px;">&nbsp;${data.guardianName || ""}</span>
           &nbsp;Mother / Father / Husband / Sister / Brother of
-          <span style="border-bottom:1.5px solid #000;display:inline-block;min-width:140px;padding:0 4px;font-weight:700;">&nbsp;${data.studentName}</span>
+          <span style="border-bottom:1.5px solid #000;display:inline-block;padding:0 4px;font-weight:700;min-width:30px;">&nbsp;${data.studentName}</span>
           &nbsp;&#8212; I Agree with Terms And Condition.
         </div>
         <!-- Marathi declaration -->
         <div style="font-size:12px;font-weight:800;color:#000;line-height:1.7;font-family:'Times New Roman', Times, serif;">
-          &#2350;&#2368; &#2358;&#2381;&#2352;&#2368;/ &#2358;&#2381;&#2352;&#2368;&#2350;&#2340;&#2368; <span style="border-bottom:1.5px solid #000;display:inline-block;min-width:130px;padding:0 4px;font-weight:700;">&nbsp;${data.guardianName || ""}&nbsp;</span>
-          ,&nbsp;<span style="border-bottom:1.5px solid #000;display:inline-block;min-width:110px;padding:0 4px;font-weight:700;">&nbsp;${data.guardianRelation || ""}&nbsp;</span>
+          &#2350;&#2368; &#2358;&#2381;&#2352;&#2368;/ &#2358;&#2381;&#2352;&#2368;&#2350;&#2340;&#2368; <span style="border-bottom:1.5px solid #000;display:inline-block;padding:0 4px;font-weight:700;min-width:30px;">&nbsp;${data.guardianName || ""}&nbsp;</span>
+          ,&nbsp;<span style="border-bottom:1.5px solid #000;display:inline-block;padding:0 4px;font-weight:700;min-width:30px;">&nbsp;${data.guardianRelation || ""}&nbsp;</span>
           &#2310;&#2312;/&#2357;&#2337;&#2368;&#2354;/&#2346;&#2340;&#2368;/&#2348;&#2361;&#2368;&#2339;/&#2349;&#2366;&#2313; &mdash; &#2350;&#2354;&#2366; &#2360;&#2352;&#2381;&#2357; &#2309;&#2335;&#2368; &#2350;&#2306;&#2332;&#2369;&#2352; &#2310;&#2361;&#2375;&#2340;.
         </div>
       </div>

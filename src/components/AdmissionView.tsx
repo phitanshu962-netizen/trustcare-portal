@@ -310,6 +310,8 @@ export default function AdmissionView({
     setSubmitting(true);
     setErrorMsg("");
 
+    const fullCourseName = courseList.find(c => c.courseId === course)?.courseName || course;
+
     const studentName = [firstName, middleName, lastName].filter(Boolean).join(" ");
 
     const calculatedTotalFees = config.fees;
@@ -354,7 +356,7 @@ export default function AdmissionView({
                 receiptNo: receiptNumber,
                 date: new Date(admissionDoc.date).toLocaleDateString("en-GB"),
                 studentName: studentName,
-                courseName: course,
+                courseName: fullCourseName,
                 courseDuration: config.duration,
                 amountPaid: config.admission_fee,
                 paymentMode: paymentMode,
@@ -372,7 +374,7 @@ export default function AdmissionView({
         receiptNo: receiptNumber,
         date: new Date(admissionDoc.date).toLocaleDateString("en-GB"),
         studentName: studentName,
-        courseName: course,
+        courseName: fullCourseName,
         installmentNumber: 1,
         amountPaid: config.admission_fee,
         paymentMode: paymentMode,
@@ -565,17 +567,17 @@ export default function AdmissionView({
                   className="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-teal-500/10 file:text-teal-400 hover:file:bg-teal-500/20 file:cursor-pointer transition-colors"
                 />
               </div>
-              <div className="flex items-center justify-center min-h-[140px] border-2 border-dashed border-slate-800 rounded-2xl p-2 bg-slate-950/40">
+              <div className="flex items-center justify-center min-w-[128px] min-h-[160px] w-32 h-40 mx-auto border-2 border-dashed border-slate-800 rounded-2xl p-2 bg-slate-950/40 overflow-hidden">
                 {photoPreview ? (
                   <img
                     src={photoPreview}
                     alt="Student Preview"
-                    className="max-h-32 object-contain rounded-xl shadow-md border border-slate-900"
+                    className="w-full h-full object-cover rounded-xl shadow-md border border-slate-900"
                   />
                 ) : (
-                  <span className="text-xs text-slate-600 font-bold uppercase tracking-wider flex items-center gap-1.5">
-                    <Camera className="h-4 w-4 text-slate-700" />
-                    No Photo Selected
+                  <span className="text-xs text-slate-600 font-bold uppercase tracking-wider flex flex-col items-center gap-1.5 text-center">
+                    <Camera className="h-5 w-5 text-slate-700" />
+                    Passport Size
                   </span>
                 )}
               </div>

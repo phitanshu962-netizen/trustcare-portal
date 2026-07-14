@@ -71,6 +71,7 @@ export default function PaymentView({
   const [studentName, setStudentName] = useState(initialStudentName || "");
   const [enrollmentId, setEnrollmentId] = useState(initialEnrollmentId || "");
   const [courseName, setCourseName] = useState(initialCourseName || "");
+  const [courseFullName, setCourseFullName] = useState(initialCourseName || "");
 
   const [guardianName, setGuardianName] = useState(initialGuardianName || "");
   const [guardianRelation, setGuardianRelation] = useState(initialGuardianRelation || "");
@@ -123,7 +124,6 @@ export default function PaymentView({
         setSchedule(saved);
         setLocked(true);
         setConfirmed(true);
-        setPaymentType(saved.length === 1 ? "full" : "emi");
         const firstDoc = await getStudentDataByEnrollmentId(id);
         if (firstDoc.success) {
           setBranch(firstDoc.branch || userProfile?.branch || "MAIN");
@@ -131,6 +131,14 @@ export default function PaymentView({
           setPhotoUrl(firstDoc.photoUrl || "");
           const hist = await getInstallmentPaymentsForStudent(id);
           if (hist) setPaymentMethod(hist.paymentMethod || "Cash");
+        }
+        const pType = saved.length === 1 ? "full" : "emi";
+        setPaymentType(pType);
+        if (pType === "emi" && saved.length > 0) {
+           setEmiDownPayment(saved[0].amount);
+           setEmiTenure(saved.length > 1 ? saved.length - 1 : 1);
+           setPartialInitial(saved[0].amount);
+           setPartialTenure(saved.length > 1 ? saved.length - 1 : 1);
         }
       }
     } catch (e) {
@@ -151,6 +159,7 @@ export default function PaymentView({
       if (res.success && res.studentName) {
         setStudentName(res.studentName);
         setCourseName(res.courseName);
+        setCourseFullName(res.courseName);
         setReceiptNo(res.receiptNumber || "");
         setBranch(res.branch || "MAIN");
         setStudentEmail(res.email || "");
@@ -161,6 +170,11 @@ export default function PaymentView({
         if (res.guardianName) setGuardianName(res.guardianName);
         if (res.guardianRelation) setGuardianRelation(res.guardianRelation);
         await checkExistingSchedule(searchId.trim());
+        try {
+          const { getCourse } = await import("../lib/services/courseService");
+          const c = await getCourse(res.courseName);
+          if (c) setCourseFullName(c.courseName);
+        } catch (e) {}
       } else {
         setErrorMsg("Enrollment ID not found in database.");
       }
@@ -354,7 +368,7 @@ export default function PaymentView({
             receiptNo: receiptNo,
             date: new Date().toLocaleDateString("en-GB"),
             studentName: studentName,
-            courseName: courseName,
+            courseName: courseFullName,
             courseDuration: duration,
             amountPaid: config.admission_fee,
             paymentMode: paymentMethod || "Cash",
@@ -409,7 +423,7 @@ export default function PaymentView({
             receiptNo: receiptNo || `IR-${enrollmentId}-${inst.installmentNumber}`,
             date: new Date().toLocaleDateString("en-GB"),
             studentName: studentName,
-            courseName: courseName,
+            courseName: courseFullName,
             installmentNumber: inst.installmentNumber,
             amountPaid: inst.amount,
             paymentMode: paymentMethod,
@@ -452,7 +466,7 @@ export default function PaymentView({
       receiptNo: receiptNo || `IR-${enrollmentId}-${inst.installmentNumber}`,
       date: new Date().toLocaleDateString("en-GB"),
       studentName: studentName,
-      courseName: courseName.replace(/_/g, " ").toUpperCase(),
+      courseName: courseFullName,
       installmentNumber: inst.installmentNumber,
       amountPaid: inst.amount,
       paymentMode: paymentMethod,
@@ -568,12 +582,12 @@ export default function PaymentView({
         <div className="bg-slate-900/20 border border-slate-900 p-4 rounded-2xl flex flex-col justify-center">
           <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Selected Course</span>
           <span className="text-sm font-bold text-slate-350 capitalize mt-1">
-            {courseName ? courseName.replace(/_/g, " ") : "Not selected"}
+            {courseFullName ? courseFullName : "Not selected"}
           </span>
         </div>
         <div className="bg-slate-900/20 border border-slate-900 p-4 rounded-2xl flex flex-col justify-center">
           <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Tenure / Duration</span>
-          <span className="text-sm font-bold text-slate-350 mt-1">{config.duration || "-"}</span>
+          <span className="text-sm font-bold text-slate-350 mt-1">{duration || "-"}</span>
         </div>
         <div className="bg-slate-900/20 border border-slate-900 p-4 rounded-2xl flex flex-col justify-center">
           <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Total Payable Course Fee</span>
@@ -680,7 +694,7 @@ export default function PaymentView({
                     disabled={locked}
                     className="bg-slate-950 border border-slate-855 rounded-lg px-2 py-1 text-slate-200 text-xs font-semibold focus:outline-none cursor-pointer"
                   >
-                    {[1, 2, 3, 4, 5, 6, 8, 10, 12, 18, 24, 36].map(n => (
+                    {Array.from({ length: 36 }, (_, i) => i + 1).map(n => (
                       <option key={n} value={n}>{n}</option>
                     ))}
                   </select>
