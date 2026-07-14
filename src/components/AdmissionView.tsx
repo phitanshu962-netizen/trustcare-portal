@@ -567,7 +567,7 @@ export default function AdmissionView({
                   className="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-teal-500/10 file:text-teal-400 hover:file:bg-teal-500/20 file:cursor-pointer transition-colors"
                 />
               </div>
-              <div className="flex items-center justify-center min-w-[128px] min-h-[160px] w-32 h-40 mx-auto border-2 border-dashed border-slate-800 rounded-2xl p-2 bg-slate-950/40 overflow-hidden">
+              <div className="flex items-center justify-center min-w-[128px] min-h-[160px] w-32 h-40 ml-auto border-2 border-dashed border-slate-800 rounded-2xl p-2 bg-slate-950/40 overflow-hidden">
                 {photoPreview ? (
                   <img
                     src={photoPreview}

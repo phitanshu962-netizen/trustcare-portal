@@ -584,6 +584,18 @@ export function openCoursePaymentReceipt(data: ReceiptData) {
   const formattedPerYearFee = formatCurrency(perYearFee);
   const formattedTotalFees = formatCurrency(data.totalFees);
 
+  const relationMap: Record<string, string> = {
+    "Mother": "आई",
+    "Father": "वडील",
+    "Husband": "पती",
+    "Wife": "पत्नी",
+    "Sister": "बहीण",
+    "Brother": "भाऊ",
+    "Guardian": "पालक"
+  };
+  const engRelation = data.guardianRelation ? `${data.guardianRelation} of` : "Guardian of";
+  const marathiRelation = data.guardianRelation ? (relationMap[data.guardianRelation] || "पालक") : "पालक";
+
   // Build installment schedule split into single 12-month tables per year
   const buildInstallmentTable = () => {
     if (!data.schedule || data.schedule.length === 0) return "";
@@ -657,7 +669,7 @@ export function openCoursePaymentReceipt(data: ReceiptData) {
       tablesHtml += `
         <div style="margin-top:10px;">
           <div style="font-weight:bold;font-size:13px;margin-bottom:4px;color:#000;font-family:'Times New Roman', Times, serif;">
-            ${y + 1}<sup>${suffix(y + 1)}</sup> Year Fee's 20
+            ${y + 1}<sup>${suffix(y + 1)}</sup> Year Fee's ${startYear + y}
           </div>
           <table style="width:100%;border-collapse:collapse;border:1.5px solid #000;table-layout:fixed;margin-bottom:4px;">
             <thead>
@@ -801,8 +813,8 @@ export function openCoursePaymentReceipt(data: ReceiptData) {
     <div style="display:flex;align-items:center;gap:14px;padding-bottom:12px;margin-bottom:6px;position:relative;z-index:2;">
       <img src="${logoBase64}" alt="Logo" style="width:126px;height:126px;object-fit:cover;flex-shrink:0;" />
       <div style="flex-grow:1;">
-        <div style="color:#013220;font-size:23px;font-weight:900;letter-spacing:0.3px;line-height:1.2;font-family:'Times New Roman', Times, serif;">TRUSTCARE INSTITUTE OF HEALTH SCIENCE</div>
-        <div style="font-weight:700;font-size:14px;color:#000;margin-top:5px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+        <div style="color:#013220;font-size:20.5px;font-weight:900;letter-spacing:0.3px;line-height:1.2;font-family:'Times New Roman', Times, serif;white-space:nowrap;">TRUSTCARE INSTITUTE OF HEALTH SCIENCE</div>
+        <div style="font-weight:700;font-size:12px;color:#000;margin-top:5px;display:flex;gap:8px;align-items:center;white-space:nowrap;">
           <span>Email: trustcareinstitute03@gmail.com</span>
           <span style="color:#555;">|</span>
           <span style="display:flex;align-items:center;gap:4px;">
@@ -893,14 +905,14 @@ export function openCoursePaymentReceipt(data: ReceiptData) {
         <!-- English declaration -->
         <div style="font-size:12px;font-weight:700;line-height:1.7;margin-bottom:2px;color:#000;">
           I Am Mr./Ms : <span style="border-bottom:1.5px solid #000;display:inline-block;padding:0 4px;font-weight:700;min-width:30px;">&nbsp;${data.guardianName || ""}</span>
-          &nbsp;Mother / Father / Husband / Sister / Brother of
+          &nbsp;${engRelation}
           <span style="border-bottom:1.5px solid #000;display:inline-block;padding:0 4px;font-weight:700;min-width:30px;">&nbsp;${data.studentName}</span>
           &nbsp;&#8212; I Agree with Terms And Condition.
         </div>
         <!-- Marathi declaration -->
         <div style="font-size:12px;font-weight:800;color:#000;line-height:1.7;font-family:'Times New Roman', Times, serif;">
           &#2350;&#2366;.&#2358;&#2381;&#2352;&#2368;./&#2358;&#2381;&#2352;&#2368;&#2350;&#2340;&#2368; <span style="border-bottom:1.5px solid #000;display:inline-block;padding:0 4px;font-weight:700;min-width:30px;">&nbsp;${data.guardianName || ""}</span>
-          &#2310;&#2312; / &#2357;&#2337;&#2368;&#2354; / &#2346;&#2340;&#2381;&#2344;&#2368; / &#2348;&#2361;&#2368;&#2339; / &#2349;&#2366;&#2313; &mdash;
+          &nbsp;${marathiRelation} &mdash;
           &#2350;&#2354;&#2366; &#2360;&#2352;&#2381;&#2357; &#2309;&#2335;&#2368; &#2350;&#2306;&#2332;&#2369;&#2352; &#2310;&#2361;&#2375;&#2340;.
         </div>
       </div>
@@ -929,8 +941,8 @@ export function openCoursePaymentReceipt(data: ReceiptData) {
     <div style="display:flex;align-items:center;gap:14px;padding-bottom:12px;margin-bottom:6px;position:relative;z-index:2;">
       <img src="${logoBase64}" alt="Logo" style="width:126px;height:126px;object-fit:cover;flex-shrink:0;" />
       <div style="flex-grow:1;">
-        <div style="color:#013220;font-size:23px;font-weight:900;letter-spacing:0.3px;line-height:1.2;font-family:'Times New Roman', Times, serif;">TRUSTCARE INSTITUTE OF HEALTH SCIENCE</div>
-        <div style="font-weight:700;font-size:11.5px;color:#000;margin-top:5px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+        <div style="color:#013220;font-size:20.5px;font-weight:900;letter-spacing:0.3px;line-height:1.2;font-family:'Times New Roman', Times, serif;white-space:nowrap;">TRUSTCARE INSTITUTE OF HEALTH SCIENCE</div>
+        <div style="font-weight:700;font-size:12px;color:#000;margin-top:5px;display:flex;gap:8px;align-items:center;white-space:nowrap;">
           <span>Email: trustcareinstitute03@gmail.com</span>
           <span style="color:#555;">|</span>
           <span style="display:flex;align-items:center;gap:4px;">
@@ -983,15 +995,15 @@ export function openCoursePaymentReceipt(data: ReceiptData) {
         <!-- English declaration -->
         <div style="font-size:12px;font-weight:700;line-height:1.7;margin-bottom:2px;color:#000;">
           I Am Mr./Ms : <span style="border-bottom:1.5px solid #000;display:inline-block;padding:0 4px;font-weight:700;min-width:30px;">&nbsp;${data.guardianName || ""}</span>
-          &nbsp;Mother / Father / Husband / Sister / Brother of
+          &nbsp;${engRelation}
           <span style="border-bottom:1.5px solid #000;display:inline-block;padding:0 4px;font-weight:700;min-width:30px;">&nbsp;${data.studentName}</span>
           &nbsp;&#8212; I Agree with Terms And Condition.
         </div>
         <!-- Marathi declaration -->
         <div style="font-size:12px;font-weight:800;color:#000;line-height:1.7;font-family:'Times New Roman', Times, serif;">
-          &#2350;&#2368; &#2358;&#2381;&#2352;&#2368;/ &#2358;&#2381;&#2352;&#2368;&#2350;&#2340;&#2368; <span style="border-bottom:1.5px solid #000;display:inline-block;padding:0 4px;font-weight:700;min-width:30px;">&nbsp;${data.guardianName || ""}&nbsp;</span>
-          ,&nbsp;<span style="border-bottom:1.5px solid #000;display:inline-block;padding:0 4px;font-weight:700;min-width:30px;">&nbsp;${data.guardianRelation || ""}&nbsp;</span>
-          &#2310;&#2312;/&#2357;&#2337;&#2368;&#2354;/&#2346;&#2340;&#2368;/&#2348;&#2361;&#2368;&#2339;/&#2349;&#2366;&#2313; &mdash; &#2350;&#2354;&#2366; &#2360;&#2352;&#2381;&#2357; &#2309;&#2335;&#2368; &#2350;&#2306;&#2332;&#2369;&#2352; &#2310;&#2361;&#2375;&#2340;.
+          &#2350;&#2366;.&#2358;&#2381;&#2352;&#2368;./&#2358;&#2381;&#2352;&#2368;&#2350;&#2340;&#2368; <span style="border-bottom:1.5px solid #000;display:inline-block;padding:0 4px;font-weight:700;min-width:30px;">&nbsp;${data.guardianName || ""}</span>
+          &nbsp;${marathiRelation} &mdash;
+          &#2350;&#2354;&#2366; &#2360;&#2352;&#2381;&#2357; &#2309;&#2335;&#2368; &#2350;&#2306;&#2332;&#2369;&#2352; &#2310;&#2361;&#2375;&#2340;.
         </div>
       </div>
       <div style="display:flex;justify-content:space-between;margin-top:18px;font-weight:800;font-size:12px;color:#000;font-family:'Times New Roman', Times, serif;">

@@ -29,9 +29,12 @@ import {
   ArrowUpDown,
   Trash2,
   User,
-  Upload
+  Upload,
+  Mail,
+  Printer
 } from "lucide-react";
 import { CircleIndianRupee } from "./CircleIndianRupee";
+import { openInstallmentReceipt } from "./CoursePaymentReceiptView";
 
 interface AnalyticsViewProps {
   userProfile: UserProfile | null;
@@ -886,6 +889,8 @@ export default function AnalyticsView({
                     <th className="px-4 py-3">Guardian Name</th>
                     <th onClick={() => handleSort("branch")} className="px-4 py-3 cursor-pointer hover:bg-slate-900/25 select-none"><span className="flex items-center gap-1">Branch <ArrowUpDown className="h-3 w-3" /></span></th>
                     <th className="px-4 py-3">Created By</th>
+                    <th className="px-4 py-3 text-center">Email</th>
+                    <th className="px-4 py-3 text-center">Receipt</th>
                   </>
                 )}
 
@@ -1046,6 +1051,72 @@ export default function AnalyticsView({
                       <td className="px-4 py-3 text-slate-450">{row.guardianName || "-"}</td>
                       <td className="px-4 py-3 capitalize text-slate-450 font-medium">{row.branch}</td>
                       <td className="px-4 py-3 text-slate-550 text-[10px]">{row.user}</td>
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={async () => {
+                            try {
+                              const email = row.email || "";
+                              if (!email) { 
+                                alert("No email address found for this student."); 
+                                return; 
+                              }
+                              alert("Sending email...");
+                              const res = await fetch("/api/send-email", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({
+                                  to: email,
+                                  type: "admission",
+                                  data: {
+                                    receiptNo: row.receiptNumber,
+                                    date: row.date,
+                                    studentName: row.studentName,
+                                    courseName: row.courseName,
+                                    courseDuration: row.courseDuration || "1 Year",
+                                    amountPaid: row.admissionFee || 5000,
+                                    paymentMode: row.paymentMode || "Cash",
+                                    receivedBy: row.user || "Admin",
+                                    branch: row.branch.toUpperCase()
+                                  }
+                                })
+                              });
+                              if (res.ok) alert("Email sent successfully!");
+                              else alert("Failed to send email.");
+                            } catch (e) {
+                              alert("Error sending email.");
+                            }
+                          }}
+                          className="px-2.5 py-1 mx-auto bg-blue-500/10 border border-blue-500/25 text-blue-400 hover:opacity-90 active:scale-95 transition-all rounded-lg flex items-center justify-center cursor-pointer hover-lift"
+                          title="Send Email"
+                        >
+                          <Mail className="h-3.5 w-3.5" />
+                        </button>
+                      </td>
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={() => {
+                            openInstallmentReceipt({
+                              receiptNo: row.receiptNumber,
+                              date: row.date,
+                              studentName: row.studentName,
+                              courseName: row.courseName,
+                              installmentNumber: 1,
+                              amountPaid: row.admissionFee || 5000,
+                              paymentMode: row.paymentMode || "Cash",
+                              receivedBy: row.user || "Admin",
+                              branch: row.branch.toUpperCase(),
+                              totalFees: row.totalCourseFees || 0,
+                              totalPaidSoFar: row.admissionFee || 5000,
+                              balanceDue: 0,
+                              isAdmission: true
+                            });
+                          }}
+                          className="px-2.5 py-1 mx-auto bg-amber-500/10 border border-amber-500/25 text-amber-400 hover:opacity-90 active:scale-95 transition-all rounded-lg flex items-center justify-center cursor-pointer hover-lift"
+                          title="Print Admission Form"
+                        >
+                          <Printer className="h-3.5 w-3.5" />
+                        </button>
+                      </td>
                     </>
                   )}
 
