@@ -48,6 +48,7 @@ export default function ExamReceiptView({ userProfile, onGoBack }: ExamReceiptVi
   const [enrollmentId, setEnrollmentId] = useState("");
   const [studentName, setStudentName] = useState("");
   const [courseName, setCourseName] = useState("");
+  const [courseFullName, setCourseFullName] = useState("");
   const [branch, setBranch] = useState("");
   const [totalAmount, setTotalAmount] = useState(500);
   const [paymentMode, setPaymentMode] = useState("");
@@ -101,6 +102,7 @@ export default function ExamReceiptView({ userProfile, onGoBack }: ExamReceiptVi
       if (res.success) {
         setStudentName(res.studentName || "");
         setCourseName(res.courseName || "");
+        setCourseFullName(res.courseName || "");
         setStudentEmail(res.email || "");
 
         const studentBranch = res.branch || userProfile?.branch || "kurla";
@@ -109,8 +111,11 @@ export default function ExamReceiptView({ userProfile, onGoBack }: ExamReceiptVi
         let fee = getExamFee(studentBranch, res.courseName || "");
         try {
           const courseData = await getCourse(res.courseName || "");
-          if (courseData && typeof courseData.examFee === "number" && courseData.examFee > 0) {
-            fee = courseData.examFee;
+          if (courseData) {
+            setCourseFullName(courseData.courseName);
+            if (typeof courseData.examFee === "number" && courseData.examFee > 0) {
+              fee = courseData.examFee;
+            }
           }
         } catch (courseErr) {
           console.warn("Failed to fetch course examFee from Firestore, using default:", courseErr);
@@ -122,6 +127,7 @@ export default function ExamReceiptView({ userProfile, onGoBack }: ExamReceiptVi
         showNotification("Enrollment ID not found or invalid", "error");
         setStudentName("");
         setCourseName("");
+        setCourseFullName("");
         setStudentEmail("");
         setTotalAmount(500);
       }
@@ -134,7 +140,8 @@ export default function ExamReceiptView({ userProfile, onGoBack }: ExamReceiptVi
   // Generate HTML for printer double receipt (same design as installment receipt)
   const printReceipt = (receiptNo: string, dateStr: string, name: string, course: string, amt: number, mode: string, studentBranch: string) => {
     const logoBase64 = "/TrustCareLogo.png";
-    const courseLabel = course.replace(/_/g, " ").toUpperCase();
+    const courseLabel = course.toUpperCase();
+    const receivedByLabel = (userProfile?.username || "Admin").split(/[_.]/).map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(" ");
     const formattedAmount = "₹" + amt.toLocaleString("en-IN");
 
     const receiptHTML = `<!DOCTYPE html>
@@ -309,18 +316,19 @@ export default function ExamReceiptView({ userProfile, onGoBack }: ExamReceiptVi
       color: #000;
       position: relative;
       z-index: 1;
+      width: 100%;
     }
     .field-label {
       white-space: nowrap;
       margin-right: 5px;
     }
     .field-underline {
-      flex: 1;
       border-bottom: 1.5px solid #000;
-      padding-bottom: 1px;
-      padding-left: 8px;
+      padding: 0 8px 1px 8px;
       font-weight: bold;
       color: #000;
+      text-align: center;
+      min-width: 50px;
     }
     .checkbox-box {
       width: 22px;
@@ -407,12 +415,12 @@ export default function ExamReceiptView({ userProfile, onGoBack }: ExamReceiptVi
           <div class="logo-container"><img class="logo-img" src="${logoBase64}" alt="Logo" /></div>
         </div>
         <div class="receipt-content">
-          <div class="field-row">
-            <div style="display: flex; width: 250px; align-items: flex-end;">
+          <div class="field-row" style="justify-content: space-between;">
+            <div style="display: flex; align-items: flex-end;">
               <span class="field-label">Receipt No.</span>
               <span class="field-underline">${receiptNo}</span>
             </div>
-            <div style="display: flex; width: 220px; align-items: flex-end; margin-left: 20px;">
+            <div style="display: flex; align-items: flex-end;">
               <span class="field-label">Date :</span>
               <span class="field-underline">${dateStr}</span>
             </div>
@@ -459,9 +467,9 @@ export default function ExamReceiptView({ userProfile, onGoBack }: ExamReceiptVi
             </div>
           </div>
 
-          <div class="field-row" style="width: 350px;">
+          <div class="field-row">
             <span class="field-label">Received By :</span>
-            <span class="field-underline">${userProfile?.username || "Admin"}</span>
+            <span class="field-underline">${receivedByLabel}</span>
           </div>
 
           <div class="field-row" style="align-items: center; margin-top: 18px;">
@@ -506,12 +514,12 @@ export default function ExamReceiptView({ userProfile, onGoBack }: ExamReceiptVi
           <div class="logo-container"><img class="logo-img" src="${logoBase64}" alt="Logo" /></div>
         </div>
         <div class="receipt-content">
-          <div class="field-row">
-            <div style="display: flex; width: 250px; align-items: flex-end;">
+          <div class="field-row" style="justify-content: space-between;">
+            <div style="display: flex; align-items: flex-end;">
               <span class="field-label">Receipt No.</span>
               <span class="field-underline">${receiptNo}</span>
             </div>
-            <div style="display: flex; width: 220px; align-items: flex-end; margin-left: 20px;">
+            <div style="display: flex; align-items: flex-end;">
               <span class="field-label">Date :</span>
               <span class="field-underline">${dateStr}</span>
             </div>
@@ -558,9 +566,9 @@ export default function ExamReceiptView({ userProfile, onGoBack }: ExamReceiptVi
             </div>
           </div>
 
-          <div class="field-row" style="width: 350px;">
+          <div class="field-row">
             <span class="field-label">Received By :</span>
-            <span class="field-underline">${userProfile?.username || "Admin"}</span>
+            <span class="field-underline">${receivedByLabel}</span>
           </div>
 
           <div class="field-row" style="align-items: center; margin-top: 18px;">
@@ -632,7 +640,7 @@ export default function ExamReceiptView({ userProfile, onGoBack }: ExamReceiptVi
             receiptNo: receipt.receiptNumber,
             date: receipt.receiptDate,
             studentName: receipt.studentName,
-            courseName: receipt.courseName,
+            courseName: receipt.courseFullName || receipt.courseName,
             totalAmount: receipt.totalAmount,
             paymentMode: receipt.paymentMode,
             receivedBy: receipt.userId,
@@ -672,12 +680,13 @@ export default function ExamReceiptView({ userProfile, onGoBack }: ExamReceiptVi
 
     setSubmitting(true);
     try {
-      const receiptData: ExamReceiptData & { email?: string } = {
+      const receiptData: ExamReceiptData & { email?: string; courseFullName?: string } = {
         receiptDate,
         receiptNumber,
         enrollmentId,
         studentName,
         courseName,
+        courseFullName,
         totalAmount,
         paymentMode,
         agreeTerms: agreeTerms ? "Agreed" : "Not Agreed",
@@ -691,7 +700,7 @@ export default function ExamReceiptView({ userProfile, onGoBack }: ExamReceiptVi
         setLastReceipt(receiptData);
 
         // Print the receipt double layout
-        printReceipt(receiptNumber, receiptDate, studentName, courseName, totalAmount, paymentMode, branch);
+        printReceipt(receiptNumber, receiptDate, studentName, courseFullName || courseName, totalAmount, paymentMode, branch);
 
         // Auto-send exam email if student email is available
         if (studentEmail) {
@@ -706,7 +715,7 @@ export default function ExamReceiptView({ userProfile, onGoBack }: ExamReceiptVi
                   receiptNo: receiptNumber,
                   date: receiptDate,
                   studentName: studentName,
-                  courseName: courseName,
+                  courseName: courseFullName || courseName,
                   totalAmount: totalAmount,
                   paymentMode: paymentMode,
                   receivedBy: userProfile?.username || "Admin",
@@ -723,6 +732,7 @@ export default function ExamReceiptView({ userProfile, onGoBack }: ExamReceiptVi
         setEnrollmentId("");
         setStudentName("");
         setCourseName("");
+        setCourseFullName("");
         setPaymentMode("");
         setAgreeTerms(false);
         setBranch("");
