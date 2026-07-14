@@ -106,6 +106,11 @@ export default function PaymentView({
   const [studentEmail, setStudentEmail] = useState("");
   const [emailSentState, setEmailSentState] = useState<{ [key: number]: boolean }>({});
   const [admissionEmailSent, setAdmissionEmailSent] = useState(false);
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [modalEmail, setModalEmail] = useState("");
+  const [modalSending, setModalSending] = useState(false);
+  const [modalError, setModalError] = useState("");
+  const [modalSuccess, setModalSuccess] = useState(false);
 
   useEffect(() => {
     if (initialEnrollmentId) {
@@ -355,6 +360,66 @@ export default function PaymentView({
     }
   };
 
+  const handleNextClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log("handleNextClick triggered!", { studentEmail, enrollmentId });
+    setModalEmail(studentEmail);
+    setModalError("");
+    setModalSending(false);
+    setModalSuccess(false);
+    setShowEmailModal(true);
+  };
+
+  const confirmAndSendAdmissionForm = async () => {
+    if (!modalEmail) {
+      alert("Please enter a valid email address.");
+      return;
+    }
+    setModalSending(true);
+    setModalError("");
+    try {
+      const response = await fetch("/api/send-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: modalEmail,
+          type: "admission_form",
+          data: {
+            enrollmentId,
+            studentName,
+            courseName,
+            courseDuration: duration,
+            totalFees,
+            admissionFee: config.admission_fee ?? 5000,
+            paymentMode: paymentMethod || "Cash",
+            guardianName,
+            guardianRelation,
+            branch,
+            receiptNo,
+            date: new Date().toLocaleDateString("en-GB"),
+            photoUrl,
+            email: modalEmail,
+            schedule: activeSchedule || [],
+            totalPayable: paymentType === "full" ? fullTotalPayable : emiTotalPayable,
+          }
+        })
+      });
+
+      const res = await response.json();
+      if (response.ok) {
+        setSuccessMsg(`Admission form PDF sent to ${modalEmail} successfully!`);
+        setModalSuccess(true);
+      } else {
+        setModalError(res.error || "Failed to send email.");
+      }
+    } catch (err: any) {
+      setModalError("Error sending email: " + err.message);
+    } finally {
+      setModalSending(false);
+    }
+  };
+
   const handleEmailInstallmentReceipt = async (inst: Installment) => {
     if (!studentEmail) {
       alert("Please specify a student email address first.");
@@ -440,6 +505,8 @@ export default function PaymentView({
       totalFees: totalPayable,
     });
   };
+
+  console.log("PaymentView render. showEmailModal:", showEmailModal, "loading:", loading, "confirmed:", confirmed);
 
   return (
     <div className="relative w-full max-w-4xl mx-auto bg-slate-900/40 border border-slate-900/60 rounded-3xl p-6 sm:p-8 backdrop-blur-xl shadow-2xl overflow-hidden mt-4 glass-panel gpu-accelerated">
@@ -724,37 +791,45 @@ export default function PaymentView({
         </button>
 
         {confirmed && (
-          <button
-            onClick={() => {
-              openCoursePaymentReceipt({
-                enrollmentId,
-                studentName,
-                courseName,
-                courseDuration: duration,
-                totalFees,
-                totalPayable: paymentType === "full" ? fullTotalPayable : emiTotalPayable,
-                paymentType,
-                paymentMethod,
-                schedule: activeSchedule,
-                receiptNo,
-                branch,
-                admissionFee: config.admission_fee ?? 5000,
-                guardianName,
-                guardianRelation,
-                photoUrl,
-              });
-              onProceedToReceipt(receiptNo, enrollmentId);
-            }}
-            className="btn-primary px-6 py-2.5 text-xs rounded-xl cursor-pointer uppercase tracking-wide"
-          >
-            View / Print Course Receipt
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={() => {
+                openCoursePaymentReceipt({
+                  enrollmentId,
+                  studentName,
+                  courseName,
+                  courseDuration: duration,
+                  totalFees,
+                  totalPayable: paymentType === "full" ? fullTotalPayable : emiTotalPayable,
+                  paymentType,
+                  paymentMethod,
+                  schedule: activeSchedule,
+                  receiptNo,
+                  branch,
+                  admissionFee: config.admission_fee ?? 5000,
+                  guardianName,
+                  guardianRelation,
+                  photoUrl,
+                });
+              }}
+              className="btn-secondary px-4 py-2.5 text-xs rounded-xl cursor-pointer uppercase tracking-wide"
+            >
+              Print Course Receipt
+            </button>
+            <button
+              type="button"
+              onClick={handleNextClick}
+              className="btn-primary px-6 py-2.5 text-xs rounded-xl cursor-pointer uppercase tracking-wide flex items-center gap-1.5"
+            >
+              Next <ArrowRight className="h-4.5 w-4.5" />
+            </button>
+          </div>
         )}
       </div>
 
       {printReceiptData && (
-        <div className="fixed inset-0 z-55 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
-          <div className="bg-white text-slate-900 rounded-3xl p-6 sm:p-8 max-w-lg w-full border border-slate-200 shadow-2xl relative animate-float-scale">
+        <div className="fixed inset-0 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md" style={{ zIndex: 9999 }}>
+          <div className="bg-white text-slate-900 rounded-3xl p-6 sm:p-8 max-w-lg w-full border border-slate-200 shadow-2xl relative animate-card-fade-in">
             <button
               onClick={() => setPrintReceiptData(null)}
               className="no-print absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 hover:bg-rose-500/10 text-slate-600 hover:text-rose-600 transition-colors flex items-center justify-center cursor-pointer"
@@ -828,6 +903,169 @@ export default function PaymentView({
                 Print Receipt
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Confirmation Email Modal */}
+      {showEmailModal && (
+        <div 
+          className="fixed inset-0 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md"
+          style={{ zIndex: 9999 }}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+        >
+          <div 
+            className="bg-slate-900 border border-slate-800 text-slate-100 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative animate-card-fade-in"
+            onClick={(e) => {
+              e.stopPropagation();
+            }}
+          >
+            {!modalSuccess ? (
+              <>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setShowEmailModal(false);
+                  }}
+                  className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-950 hover:bg-rose-500/10 text-slate-400 hover:text-rose-600 transition-colors flex items-center justify-center cursor-pointer"
+                  disabled={modalSending}
+                >
+                  <X className="h-4 w-4" />
+                </button>
+
+                <div className="text-center pb-4 mb-4 border-b border-slate-800">
+                  <div className="mx-auto w-12 h-12 bg-teal-500/10 border border-teal-500/20 text-teal-400 rounded-full flex items-center justify-center mb-3">
+                    ✉
+                  </div>
+                  <h2 className="text-lg font-bold bg-gradient-to-r from-teal-400 to-indigo-400 bg-clip-text text-transparent">
+                    Confirm & Send Admission Form
+                  </h2>
+                  <p className="text-[11px] text-slate-450 mt-1 font-medium">
+                    The official A4 Admission Form PDF will be generated and emailed.
+                  </p>
+                </div>
+
+                {modalError && (
+                  <div className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-450 text-xs flex items-center gap-2">
+                    <AlertCircle className="h-4.5 w-4.5 text-rose-450 shrink-0" />
+                    <span className="font-semibold">{modalError}</span>
+                  </div>
+                )}
+
+                <div className="space-y-4">
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-semibold text-slate-400">Recipient Email Address</label>
+                    <input
+                      type="email"
+                      value={modalEmail}
+                      onChange={(e) => setModalEmail(e.target.value)}
+                      disabled={modalSending}
+                      className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-700 focus:outline-none focus:border-teal-500/50 font-medium"
+                      placeholder="student@example.com"
+                    />
+                  </div>
+
+                  <div className="pt-2 flex justify-end gap-3">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setShowEmailModal(false);
+                      }}
+                      disabled={modalSending}
+                      className="px-4 py-2 text-xs font-semibold text-slate-400 hover:bg-slate-850/50 rounded-xl transition-all cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        confirmAndSendAdmissionForm();
+                      }}
+                      disabled={modalSending}
+                      className="px-5 py-2 text-xs font-bold text-slate-950 bg-gradient-to-r from-teal-400 to-indigo-500 hover:opacity-90 active:scale-95 disabled:opacity-50 disabled:scale-100 transition-all rounded-xl flex items-center gap-1.5 shadow cursor-pointer"
+                    >
+                      {modalSending ? (
+                        <>
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          Sending...
+                        </>
+                      ) : (
+                        <>Send & Proceed</>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="text-center pb-4 mb-4">
+                  <div className="mx-auto w-12 h-12 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mb-3">
+                    ✓
+                  </div>
+                  <h2 className="text-lg font-bold bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
+                    Admission Form Sent!
+                  </h2>
+                  <p className="text-[11px] text-slate-450 mt-2 font-medium">
+                    The Admission Form PDF was successfully generated and sent to:
+                  </p>
+                  <p className="text-xs font-bold text-slate-200 mt-1 select-all break-all">
+                    {modalEmail}
+                  </p>
+                </div>
+
+                <div className="pt-2 flex flex-col sm:flex-row gap-3">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      openCoursePaymentReceipt({
+                        enrollmentId,
+                        studentName,
+                        courseName,
+                        courseDuration: duration,
+                        totalFees,
+                        totalPayable: paymentType === "full" ? fullTotalPayable : emiTotalPayable,
+                        paymentType,
+                        paymentMethod,
+                        schedule: activeSchedule,
+                        receiptNo,
+                        branch,
+                        admissionFee: config.admission_fee ?? 5000,
+                        guardianName,
+                        guardianRelation,
+                        photoUrl,
+                      });
+                    }}
+                    className="flex-1 px-4 py-2.5 text-xs font-bold text-slate-350 bg-slate-800 hover:bg-slate-750 transition-all rounded-xl flex items-center justify-center gap-1.5 cursor-pointer border border-slate-700"
+                  >
+                    Print Course Receipt
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setShowEmailModal(false);
+                      setModalSuccess(false);
+                      onProceedToReceipt(receiptNo, enrollmentId);
+                    }}
+                    className="flex-1 px-5 py-2.5 text-xs font-bold text-slate-950 bg-gradient-to-r from-teal-400 to-indigo-500 hover:opacity-90 active:scale-95 transition-all rounded-xl flex items-center justify-center cursor-pointer shadow"
+                  >
+                    Finish & Close
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

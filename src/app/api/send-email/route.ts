@@ -314,6 +314,534 @@ async function generatePdfReceiptBuffer(type: string, data: any): Promise<Buffer
   return Buffer.from(bytes);
 }
 
+async function fetchImageAsBuffer(url: string): Promise<Buffer> {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch image: ${response.statusText}`);
+  }
+  const arrayBuffer = await response.arrayBuffer();
+  return Buffer.from(arrayBuffer);
+}
+
+function getMixedTextWidth(text: string, fontSize: number, devanagariFont: any, boldFont: any): number {
+  const regex = /([\u0900-\u097F]+)/g;
+  const parts = text.split(regex);
+  let totalWidth = 0;
+  for (const part of parts) {
+    if (!part) continue;
+    const isDevanagari = /[\u0900-\u097F]/.test(part);
+    const selectedFont = isDevanagari ? (devanagariFont || boldFont) : boldFont;
+    try {
+      totalWidth += selectedFont.widthOfTextAtSize(part.replace(/—/g, '-'), fontSize);
+    } catch {
+      totalWidth += part.length * (fontSize * 0.5);
+    }
+  }
+  return totalWidth;
+}
+
+function wrapMixedText(text: string, maxWidth: number, fontSize: number, devanagariFont: any, boldFont: any): string[] {
+  const words = text.split(' ');
+  const lines: string[] = [];
+  let currentLine = '';
+
+  for (const word of words) {
+    const testLine = currentLine ? `${currentLine} ${word}` : word;
+    const width = getMixedTextWidth(testLine, fontSize, devanagariFont, boldFont);
+    if (width > maxWidth) {
+      lines.push(currentLine);
+      currentLine = word;
+    } else {
+      currentLine = testLine;
+    }
+  }
+  if (currentLine) {
+    lines.push(currentLine);
+  }
+  return lines;
+}
+
+async function generatePdfAdmissionFormBuffer(data: any): Promise<Buffer> {
+  const pdfDoc = await PDFDocument.create();
+  pdfDoc.registerFontkit(fontkit);
+
+  const page = pdfDoc.addPage([595, 842]); // Page 1: Admission Form
+  const page2 = pdfDoc.addPage([595, 842]); // Page 2: Undertaking
+
+  const font = await pdfDoc.embedFont(StandardFonts.TimesRoman);
+  const boldFont = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
+
+  // Load Geist-Regular font for Rupee symbol
+  let rupeeFont: any = null;
+  try {
+    const fontPath = path.join(process.cwd(), 'node_modules', 'next', 'dist', 'compiled', '@vercel', 'og', 'Geist-Regular.ttf');
+    if (fs.existsSync(fontPath)) {
+      const fontBytes = fs.readFileSync(fontPath);
+      rupeeFont = await pdfDoc.embedFont(fontBytes);
+    }
+  } catch (err) {
+    console.error("Error embedding Geist font for Rupee symbol:", err);
+  }
+
+  // Load Noto Sans Devanagari font for Marathi text
+  let devanagariFont: any = null;
+  try {
+    const fontPath = path.join(process.cwd(), 'public', 'fonts', 'NotoSansDevanagari-Regular.ttf');
+    if (fs.existsSync(fontPath)) {
+      const fontBytes = fs.readFileSync(fontPath);
+      devanagariFont = await pdfDoc.embedFont(fontBytes);
+    }
+  } catch (err) {
+    console.error("Error embedding Noto Sans Devanagari font:", err);
+  }
+
+  const studentName = data.studentName || 'Student';
+  const enrollmentId = data.enrollmentId || 'N/A';
+  const receiptNo = data.receiptNo || 'N/A';
+  const date = data.date || new Date().toLocaleDateString('en-GB');
+  const courseName = (data.courseName || '').replace(/_/g, ' ').toUpperCase();
+  const courseDuration = data.courseDuration || 'N/A';
+  const totalFees = data.totalFees || 0;
+  const admissionFee = data.admissionFee || 0;
+  const paymentMode = data.paymentMode || 'N/A';
+  const guardianName = data.guardianName || 'N/A';
+  const guardianRelation = data.guardianRelation || 'N/A';
+  const branch = (data.branch || 'Mankhurd').toUpperCase();
+  const photoUrl = data.photoUrl || '';
+  const email = data.email || 'N/A';
+  const schedule = data.schedule || [];
+  const totalPayable = data.totalPayable || totalFees;
+
+  const years = courseDuration ? parseInt(courseDuration.split(" ")[0]) || 1 : 1;
+  const perYearFee = years > 1 ? Math.round(totalFees / years) : totalFees;
+
+  const darkGreen = rgb(0.004, 0.196, 0.125); // #013220
+  const blackColor = rgb(0, 0, 0);
+  const grayColor = rgb(0.4, 0.4, 0.4);
+  const lightGrayColor = rgb(0.95, 0.95, 0.95);
+
+  const drawRupeeSymbol = (p: any, x: number, y: number, size = 10) => {
+    if (rupeeFont) {
+      p.drawText('₹', { x, y, size, font: rupeeFont, color: blackColor });
+    } else {
+      p.drawText('Rs.', { x, y, size, font: font, color: blackColor });
+    }
+  };
+
+  const drawTextWithDevanagari = (targetPage: any, text: string, x: number, y: number, options: any) => {
+    if (devanagariFont) {
+      targetPage.drawText(text, {
+        x,
+        y,
+        font: devanagariFont,
+        ...options
+      });
+    } else {
+      targetPage.drawText(text, {
+        x,
+        y,
+        font: boldFont,
+        ...options
+      });
+    }
+  };
+
+  const drawMixedText = (targetPage: any, text: string, x: number, y: number, fontSize: number, options: any = {}) => {
+    const regex = /([\u0900-\u097F]+)/g;
+    const parts = text.split(regex);
+    let currentX = x;
+    const color = options.color || blackColor;
+    
+    for (const part of parts) {
+      if (!part) continue;
+      const isDevanagari = /[\u0900-\u097F]/.test(part);
+      const selectedFont = isDevanagari ? (devanagariFont || boldFont) : boldFont;
+      const cleanPart = part.replace(/—/g, '-');
+      
+      try {
+        targetPage.drawText(cleanPart, {
+          x: currentX,
+          y,
+          size: fontSize,
+          font: selectedFont,
+          color,
+          ...options
+        });
+        currentX += selectedFont.widthOfTextAtSize(cleanPart, fontSize);
+      } catch (err) {
+        console.error("Error drawing mixed text part:", cleanPart, err);
+        try {
+          targetPage.drawText(cleanPart, {
+            x: currentX,
+            y,
+            size: fontSize,
+            font: boldFont,
+            color,
+            ...options
+          });
+          currentX += boldFont.widthOfTextAtSize(cleanPart, fontSize);
+        } catch {
+          currentX += cleanPart.length * (fontSize * 0.5);
+        }
+      }
+    }
+  };
+
+  // Helper to draw border & layout
+  const drawBasePageTemplate = async (targetPage: any) => {
+    // Outer border
+    targetPage.drawRectangle({
+      x: 25,
+      y: 25,
+      width: 545,
+      height: 792,
+      borderWidth: 2,
+      borderColor: blackColor,
+      color: rgb(1, 1, 1),
+      opacity: 0,
+    });
+
+    // Logo image
+    try {
+      const logoPath = path.join(process.cwd(), 'public', 'TrustCareLogo.png');
+      if (fs.existsSync(logoPath)) {
+        const logoBytes = fs.readFileSync(logoPath);
+        const logoImage = await pdfDoc.embedPng(logoBytes);
+        targetPage.drawImage(logoImage, {
+          x: 45,
+          y: 730,
+          width: 70,
+          height: 65,
+        });
+
+        // Watermark
+        targetPage.drawImage(logoImage, {
+          x: 147.5,
+          y: 270,
+          width: 300,
+          height: 270,
+          opacity: 0.04,
+        });
+      }
+    } catch (err) {
+      console.error("Error drawing logo template:", err);
+    }
+
+    // Title text
+    targetPage.drawText("TRUSTCARE INSTITUTE OF HEALTH SCIENCE", {
+      x: 130,
+      y: 765,
+      size: 16,
+      font: boldFont,
+      color: darkGreen,
+    });
+
+    const contactLine = "Email: trustcareinstitute03@gmail.com   |   +91 9967340243   |   +91 9967288158";
+    targetPage.drawText(contactLine, {
+      x: 130,
+      y: 748,
+      size: 8.5,
+      font: boldFont,
+      color: blackColor,
+    });
+
+    // Address banner
+    targetPage.drawRectangle({
+      x: 45,
+      y: 702,
+      width: 505,
+      height: 16,
+      borderWidth: 1,
+      borderColor: blackColor,
+      color: rgb(1, 1, 1),
+      opacity: 0,
+    });
+
+    const addressText = "TRUSTCARE INSTITUTE OF HEALTH SCIENCE, 1ST FLOOR, SHIVSENA OFFICE, BHARAT NAGAR, MANKHURD, MUMBAI - 400 088.";
+    targetPage.drawText(addressText, {
+      x: 48,
+      y: 706,
+      size: 7,
+      font: boldFont,
+      color: blackColor,
+    });
+  };
+
+  const drawBottomSection = (targetPage: any) => {
+    // Dashed line
+    targetPage.drawLine({
+      start: { x: 45, y: 140 },
+      end: { x: 550, y: 140 },
+      thickness: 0.8,
+      color: grayColor,
+      dashArray: [3, 3]
+    });
+
+    // English declaration
+    const engDecl = `I Am Mr./Ms : ${guardianName}  Relation: ${guardianRelation}  of  ${studentName} — I Agree with Terms And Condition.`;
+    targetPage.drawText(engDecl, {
+      x: 45,
+      y: 122,
+      size: 8,
+      font: boldFont,
+      color: blackColor
+    });
+
+    // Marathi declaration
+    const marDecl = `मी श्री/ श्रीमती ${guardianName}, ${guardianRelation} आई/वडील/पती/बहीण/भाऊ — मला सर्व अटी मंजूर आहेत.`;
+    drawMixedText(targetPage, marDecl, 45, 107, 8.5, {
+      color: blackColor
+    });
+
+    // Signatures
+    targetPage.drawLine({ start: { x: 45, y: 55 }, end: { x: 180, y: 55 }, thickness: 0.8, color: blackColor });
+    targetPage.drawText("Parent's Sign.", { x: 80, y: 42, size: 8.5, font: boldFont });
+
+    targetPage.drawLine({ start: { x: 220, y: 55 }, end: { x: 350, y: 55 }, thickness: 0.8, color: blackColor });
+    targetPage.drawText("Student Sign.", { x: 255, y: 42, size: 8.5, font: boldFont });
+
+    targetPage.drawLine({ start: { x: 390, y: 55 }, end: { x: 550, y: 55 }, thickness: 0.8, color: blackColor });
+    targetPage.drawText("Authorised Sign./Stamp", { x: 415, y: 42, size: 8.5, font: boldFont });
+  };
+
+  // Build Page 1
+  await drawBasePageTemplate(page);
+
+  // Draw Title Banner: ADMISSION FORM
+  page.drawRectangle({
+    x: (595 - 180) / 2,
+    y: 665,
+    width: 180,
+    height: 22,
+    color: darkGreen,
+  });
+  page.drawText("ADMISSION FORM", {
+    x: (595 - boldFont.widthOfTextAtSize("ADMISSION FORM", 12)) / 2,
+    y: 672,
+    size: 12,
+    font: boldFont,
+    color: rgb(1, 1, 1),
+  });
+
+  // Photo embedding or placeholder
+  let photoDrawn = false;
+  if (photoUrl) {
+    try {
+      const photoBuffer = await fetchImageAsBuffer(photoUrl);
+      let photoImg;
+      try {
+        photoImg = await pdfDoc.embedJpg(photoBuffer);
+      } catch {
+        photoImg = await pdfDoc.embedPng(photoBuffer);
+      }
+      page.drawImage(photoImg, {
+        x: 460,
+        y: 575,
+        width: 80,
+        height: 80,
+      });
+      page.drawRectangle({
+        x: 460,
+        y: 575,
+        width: 80,
+        height: 80,
+        borderWidth: 1,
+        borderColor: blackColor,
+        opacity: 0,
+      });
+      photoDrawn = true;
+    } catch (err) {
+      console.error("Error rendering photo in Page 1:", err);
+    }
+  }
+  if (!photoDrawn) {
+    page.drawRectangle({
+      x: 460,
+      y: 575,
+      width: 80,
+      height: 80,
+      borderWidth: 1,
+      borderColor: grayColor,
+      color: lightGrayColor,
+    });
+    page.drawText("PASTE", { x: 485, y: 620, size: 7, font: boldFont, color: grayColor });
+    page.drawText("PHOTO", { x: 485, y: 610, size: 7, font: boldFont, color: grayColor });
+  }
+
+  // Receipt No & Date
+  page.drawText(`Receipt No. ${receiptNo}`, { x: 45, y: 635, size: 10, font: boldFont });
+  page.drawText(`Date : ${date}`, { x: 330, y: 635, size: 10, font: boldFont });
+
+  // Rows of details
+  const drawRowLine = (label: string, val: string, x: number, y: number, labelW: number, lineW: number) => {
+    page.drawText(label, { x, y, size: 10, font: boldFont, color: blackColor });
+    page.drawText(val, { x: x + labelW, y, size: 10, font: font, color: blackColor });
+    page.drawLine({ start: { x: x + labelW - 2, y: y - 2 }, end: { x: x + labelW + lineW, y: y - 2 }, thickness: 0.8, color: blackColor });
+  };
+
+  drawRowLine("Student Name :", studentName, 45, 600, 100, 300);
+  drawRowLine("Course Name  :", courseName, 45, 575, 100, 300);
+  
+  // Row 3
+  page.drawText("Course Duration :", { x: 45, y: 550, size: 10, font: boldFont });
+  page.drawText(courseDuration, { x: 145, y: 550, size: 10, font: font });
+  page.drawLine({ start: { x: 143, y: 548 }, end: { x: 280, y: 548 }, thickness: 0.8, color: blackColor });
+
+  page.drawText("Admission Fees :", { x: 295, y: 550, size: 10, font: boldFont });
+  drawRupeeSymbol(page, 395, 550);
+  page.drawText(admissionFee.toLocaleString('en-IN'), { x: 407, y: 550, size: 10, font: font });
+  page.drawLine({ start: { x: 392, y: 548 }, end: { x: 550, y: 548 }, thickness: 0.8, color: blackColor });
+
+  // Row 4
+  page.drawText("Course Fees :", { x: 45, y: 525, size: 10, font: boldFont });
+  drawRupeeSymbol(page, 125, 525);
+  page.drawText(perYearFee.toLocaleString('en-IN'), { x: 137, y: 525, size: 10, font: font });
+  page.drawLine({ start: { x: 122, y: 523 }, end: { x: 215, y: 523 }, thickness: 0.8, color: blackColor });
+
+  page.drawText("x", { x: 225, y: 525, size: 10, font: font });
+  page.drawText(`${years} Year${years > 1 ? 's' : ''}`, { x: 245, y: 525, size: 10, font: font });
+  page.drawLine({ start: { x: 240, y: 523 }, end: { x: 300, y: 523 }, thickness: 0.8, color: blackColor });
+
+  page.drawText("=", { x: 310, y: 525, size: 10, font: font });
+  drawRupeeSymbol(page, 330, 525);
+  page.drawText(totalFees.toLocaleString('en-IN'), { x: 342, y: 525, size: 10, font: font });
+  page.drawLine({ start: { x: 327, y: 523 }, end: { x: 430, y: 523 }, thickness: 0.8, color: blackColor });
+  page.drawText("Total", { x: 440, y: 525, size: 10, font: boldFont });
+
+  // Row 5: Exam Fees
+  page.drawText("Exam Fees :", { x: 45, y: 500, size: 10, font: boldFont });
+  page.drawLine({ start: { x: 122, y: 498 }, end: { x: 550, y: 498 }, thickness: 0.8, color: blackColor });
+
+  // Draw Installment Table
+  let tableEndY = 455;
+  if (schedule.length > 0) {
+    let tblY = 475;
+    page.drawRectangle({ x: 45, y: tblY, width: 505, height: 16, color: lightGrayColor });
+    page.drawText("Installment", { x: 50, y: tblY + 4, size: 8, font: boldFont });
+    page.drawText("Due Date", { x: 200, y: tblY + 4, size: 8, font: boldFont });
+    page.drawText("Amount", { x: 350, y: tblY + 4, size: 8, font: boldFont });
+    page.drawText("Status", { x: 480, y: tblY + 4, size: 8, font: boldFont });
+    
+    page.drawLine({ start: { x: 45, y: tblY }, end: { x: 550, y: tblY }, thickness: 0.8, color: blackColor });
+
+    for (let i = 0; i < schedule.length; i++) {
+      const inst = schedule[i];
+      tblY -= 15;
+      
+      const instLabel = `Installment ${inst.installmentNumber} (${inst.label || `Installment ${inst.installmentNumber}`})`;
+      const dueDate = inst.dueDate ? new Date(inst.dueDate).toLocaleDateString('en-GB') : 'N/A';
+      const amount = inst.amount || 0;
+      const status = inst.status || 'Pending';
+      
+      page.drawText(instLabel, { x: 50, y: tblY + 3, size: 8, font: font });
+      page.drawText(dueDate, { x: 200, y: tblY + 3, size: 8, font: font });
+      
+      drawRupeeSymbol(page, 345, tblY + 3, 8);
+      page.drawText(amount.toLocaleString('en-IN'), { x: 357, y: tblY + 3, size: 8, font: font });
+      page.drawText(status, { x: 480, y: tblY + 3, size: 8, font: boldFont, color: status === 'Paid' ? rgb(0, 0.5, 0) : rgb(0.8, 0, 0) });
+      
+      page.drawLine({ start: { x: 45, y: tblY }, end: { x: 550, y: tblY }, thickness: 0.5, color: rgb(0.8, 0.8, 0.8) });
+    }
+    page.drawLine({ start: { x: 45, y: tblY }, end: { x: 550, y: tblY }, thickness: 0.8, color: blackColor });
+    tableEndY = tblY;
+  }
+
+  // Draw Total Payable
+  const totalPayableY = Math.max(160, tableEndY - 20);
+  page.drawText("Total Payable :", { x: 350, y: totalPayableY, size: 10, font: boldFont });
+  drawRupeeSymbol(page, 435, totalPayableY, 10);
+  page.drawText(totalPayable.toLocaleString('en-IN'), { x: 447, y: totalPayableY, size: 12, font: boldFont });
+  page.drawLine({ start: { x: 350, y: totalPayableY - 4 }, end: { x: 550, y: totalPayableY - 4 }, thickness: 1.5, color: blackColor });
+
+  // Draw Bottom Section on Page 1
+  drawBottomSection(page);
+
+
+  // Build Page 2: Undertaking / हमी पत्र
+  await drawBasePageTemplate(page2);
+
+  // Draw Title Banner: हमी पत्र / UNDER TAKING
+  page2.drawRectangle({
+    x: (595 - 200) / 2,
+    y: 665,
+    width: 200,
+    height: 22,
+    color: darkGreen,
+  });
+  
+  drawMixedText(page2, "हमी पत्र / UNDER TAKING", (595 - 130) / 2, 672, 10, { color: rgb(1, 1, 1) });
+
+  let page2Y = 660;
+
+  // Marathi Points
+  const mrPoints = [
+    "भरलेली फी परत मिळणार नाही.",
+    "दिलेल्या तारखेवर फी भरावी अन्यथा आम्ही दंड घेऊ.",
+    "जर तुम्हाला प्रवेश रद्द करायचा असल्यास तुम्हाला पूर्ण फी भरणे गरजेचे आहे.",
+    "जर तुम्हा गैरवर्तन केले तर तुमचं प्रवेश रद्द करण्यात येईल.",
+    "तुमचे गुण तुमच्या उपस्थिती आणि तुमच्या वर्तनावर अवलंबून असतील.",
+    "आठ दिवसांपेक्षा जास्त गैरहजर असल्यास तुमचे प्रवेश रद्द करण्यात येईल.",
+    "परिक्षेचे फी एक महिना अगोदर भरावी.",
+    "जर तुम्ही OJT मध्येच थांबवली तर TCIHS तुमच्यासाठी जबाबदार नाही.",
+    "100% नोकरीची हमी",
+    "75% उपस्थिती अनिवार्य आहे.",
+    "दिलेल्या वेळापकानुसार परिक्षा द्यावी उशीर केल्यास परिक्षेचे फी वाढेल याला राहणार TCIHS नाही",
+    "जर तुम्ही व तुमचे पालक दिलेल्या अटी विरोधात वाद घातला तर कायदेशीर रित्या कारवाई केली जाईल. वर्गात नेहमी वेळेवर येणार अनिवार्य आहे. अन्यथा वर्गात प्रवेश दिला जाणार नाही."
+  ];
+
+  for (let i = 0; i < mrPoints.length; i++) {
+    const origText = `${i + 1}. ${mrPoints[i]}`;
+    const wrappedLines = wrapMixedText(origText, 500, 7.5, devanagariFont, boldFont);
+    for (const wl of wrappedLines) {
+      page2Y -= 11;
+      drawMixedText(page2, wl, 45, page2Y, 7.5, { color: blackColor });
+    }
+  }
+
+  // Dashed separator line
+  page2Y -= 12;
+  page2.drawLine({
+    start: { x: 45, y: page2Y },
+    end: { x: 550, y: page2Y },
+    thickness: 0.8,
+    color: grayColor,
+    dashArray: [3, 3]
+  });
+
+  // English Points
+  const enPoints = [
+    "Paid Fees Not Refundable.",
+    "Pay Your Fees Above Given Date Otherwise We Charge Penalties.",
+    "If You Want To Cancel Admission Still You Have To Pay Full Fees.",
+    "If You Misbehave Then We Will Cancel Your Admission.",
+    "Final Marks Are Based On Attendance And Behavior Etc.",
+    "More Than 8 Days absent Will Cancel The Admission, Without Your Permission.",
+    "Exam Fees Should Have To Pay Before 1 Month Of Exam.",
+    "If You Dropping OJT, TCIHS Is Not Responsible For You.",
+    "100% Job Assurance",
+    "75% Attendance Should Be Compulsory.",
+    "Give Exam In Given Schedule. If You Delay Then TCIHS Will Not Responsible, Exam Fees Will Increase.",
+    "If You And Your Guardian Argue Against The Terms And Conditions, Legal Action Will Be Taken.",
+    "It Is compulsory To Come on Time Otherwise You Are Not Permitted To Sit In Lecture."
+  ];
+
+  for (let i = 0; i < enPoints.length; i++) {
+    const origText = `${i + 1}. ${enPoints[i]}`;
+    const wrappedLines = wrapMixedText(origText, 500, 7.5, devanagariFont, boldFont);
+    for (const wl of wrappedLines) {
+      page2Y -= 11;
+      page2.drawText(wl, { x: 45, y: page2Y, size: 7.5, font: boldFont, color: blackColor });
+    }
+  }
+
+  // Draw Bottom Section on Page 2
+  drawBottomSection(page2);
+
+  const bytes = await pdfDoc.save();
+  return Buffer.from(bytes);
+}
+
+
 function generateEmailTemplate(type: string, data: any): string {
   const studentName = data.studentName || 'Student';
   const receiptNo = data.receiptNo || 'N/A';
@@ -366,6 +894,21 @@ function generateEmailTemplate(type: string, data: any): string {
       <tr style="border-bottom: 1px solid #f1f5f9;">
         <td style="padding: 10px 0; color: #64748b; font-weight: bold;">Purpose of Payment</td>
         <td style="padding: 10px 0; text-align: right; color: #1e293b;">Exam Registration Fee</td>
+      </tr>
+    `;
+  } else if (type === 'admission_form') {
+    receiptTypeLabel = 'Admission Form';
+    bodyHtml = `Congratulations! Your admission details at <strong>TrustCare Institute of Health Science</strong> are confirmed.
+      <br /><br />
+      Please find your official Admission Form attached to this email as a PDF document for your records.`;
+    additionalRows = `
+      <tr style="border-bottom: 1px solid #f1f5f9;">
+        <td style="padding: 10px 0; color: #64748b; font-weight: bold;">Enrollment ID</td>
+        <td style="padding: 10px 0; text-align: right; color: #1e293b; font-weight: bold;">${data.enrollmentId || 'N/A'}</td>
+      </tr>
+      <tr style="border-bottom: 1px solid #f1f5f9;">
+        <td style="padding: 10px 0; color: #64748b; font-weight: bold;">Admission Date</td>
+        <td style="padding: 10px 0; text-align: right; color: #1e293b;">${date}</td>
       </tr>
     `;
   }
@@ -454,7 +997,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing recipient email 'to'" }, { status: 400 });
     }
 
-    if (!type || !['admission', 'installment', 'exam'].includes(type)) {
+    if (!type || !['admission', 'installment', 'exam', 'admission_form'].includes(type)) {
       return NextResponse.json({ error: "Invalid or missing receipt type" }, { status: 400 });
     }
 
@@ -468,23 +1011,36 @@ export async function POST(req: Request) {
     let subject = `Trustcare Institute Of Health Science Receipt - ${data.receiptNo || 'Transaction Alert'}`;
     if (type === 'admission') {
       subject = `Admission Confirmed! Congratulations ${data.studentName || ''} - Trustcare Institute Of Health Science`;
+    } else if (type === 'admission_form') {
+      subject = `Official Admission Form - ${data.studentName || ''} (${data.enrollmentId || ''}) - Trustcare Institute Of Health Science`;
     }
     const htmlContent = generateEmailTemplate(type, data);
 
     // Generate PDF copy of the receipt
     let attachments: any[] = [];
     try {
-      const pdfBuffer = await generatePdfReceiptBuffer(type, data);
+      let pdfBuffer: Buffer;
+      if (type === 'admission_form') {
+        pdfBuffer = await generatePdfAdmissionFormBuffer(data);
+      } else {
+        pdfBuffer = await generatePdfReceiptBuffer(type, data);
+      }
       const base64Content = pdfBuffer.toString('base64');
       
-      let filename = `receipt_${(data.receiptNo || 'details').replace(/\//g, '-')}.pdf`;
+      let filename = type === 'admission_form'
+        ? `admission_form_${(data.enrollmentId || 'details').replace(/\//g, '-')}.pdf`
+        : `receipt_${(data.receiptNo || 'details').replace(/\//g, '-')}.pdf`;
       if (data.studentName) {
         const sanitizedStudentName = data.studentName
           .replace(/[^a-zA-Z0-9\s-_]/g, '')
           .trim()
           .replace(/\s+/g, '_');
-        const sanitizedReceiptNo = (data.receiptNo || 'details').replace(/[\/\\]/g, '-');
-        filename = `${sanitizedStudentName}_${sanitizedReceiptNo}.pdf`;
+        if (type === 'admission_form') {
+          filename = `${sanitizedStudentName}_Admission_Form_${(data.enrollmentId || 'details').replace(/[\/\\]/g, '-')}.pdf`;
+        } else {
+          const sanitizedReceiptNo = (data.receiptNo || 'details').replace(/[\/\\]/g, '-');
+          filename = `${sanitizedStudentName}_${sanitizedReceiptNo}.pdf`;
+        }
       }
 
       // SendGrid requires `content` (base64 encoded), `filename`, `type`, and `disposition`

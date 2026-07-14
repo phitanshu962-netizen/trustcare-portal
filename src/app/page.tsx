@@ -214,7 +214,6 @@ export default function Home() {
 
   const handleProceedToReceipt = (receiptNo: string, enrollmentId: string) => {
     // Navigate student back to inquiry form/dash after completion
-    alert(`Payment configuration logged successfully! Student ID: ${enrollmentId}`);
     setActiveTab("inquiry");
   };
 
