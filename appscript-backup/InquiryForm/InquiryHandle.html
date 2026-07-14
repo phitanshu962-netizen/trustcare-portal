@@ -2,7 +2,7 @@
     // Define the form fields that need to be populated/cleared
     const formFieldsToPopulate = [
         'firstName', 'middleName', 'lastName', 'qualification', 'phoneNo', 'whatsappNo', 'parentsNo',
-        'email', 'age', 'addressLine1', 'addressLine2', 'addressLine3', 'pincode',
+        'email', 'age', 'addressLine1', 'addressLine2', 'pincode',
         'interestedCourse', 'inquiryTakenBy', 'branch22', 'gender'
     ];
 
@@ -146,7 +146,6 @@
                         <div class="text-sm text-gray-900 text-right flex-1">
                             <div>${record.addressLine1 || 'N/A'}</div>
                             ${record.addressLine2 ? `<div>${record.addressLine2}</div>` : ''}
-                            ${record.addressLine3 ? `<div>${record.addressLine3}</div>` : ''}
                             <div class="font-mono mt-1">${record.pincode || 'N/A'}</div>
                         </div>
                     </div>
@@ -191,7 +190,7 @@
     //         formFieldsToPopulate.forEach(field => {
     //             const inputElement = document.getElementById(field);
     //             if (inputElement) {
-    //                 if (field === 'addressLine1' || field === 'addressLine2' || field === 'addressLine3' || field === 'pincode') {
+    //                 if (field === 'addressLine1' || field === 'addressLine2' || field === 'pincode') {
     //                     // These are handled separately by the parsing logic in checkAadharNumberInquiry's return
     //                     // If record contains separate addressLine1, etc., assign them directly.
     //                     // Otherwise, rely on the split logic from checkAadharNumberInquiry.
@@ -242,7 +241,7 @@
         formFieldsToPopulate.forEach(field => {
             const inputElement = document.getElementById(field);
             if (inputElement) {
-                if (field === 'addressLine1' || field === 'addressLine2' || field === 'addressLine3' || field === 'pincode') {
+                if (field === 'addressLine1' || field === 'addressLine2' || field === 'pincode') {
                     inputElement.value = currentFoundRecord[field] || '';
                 } else if (inputElement.type === 'date') {
                     if (currentFoundRecord[field]) {
@@ -368,7 +367,6 @@
             age: document.getElementById("age")?.value.trim() || "",
             addressLine1: document.getElementById("addressLine1")?.value.trim() || "",
             addressLine2: document.getElementById("addressLine2")?.value.trim() || "",
-            addressLine3: document.getElementById("addressLine3")?.value.trim() || "",
             pincode: document.getElementById("pincode")?.value.trim() || "",
             interestedCourse:
                 document.getElementById("interestedCourse")?.value.trim() || "",
@@ -472,7 +470,6 @@
             age: document.getElementById('age').value,
             addressLine1: document.getElementById('addressLine1').value,
             addressLine2: document.getElementById('addressLine2').value,
-            addressLine3: document.getElementById('addressLine3').value,
             pincode: document.getElementById('pincode').value,
             interestedCourse: document.getElementById('interestedCourse').value,
             inquiryTakenBy: document.getElementById('inquiryTakenBy').value,

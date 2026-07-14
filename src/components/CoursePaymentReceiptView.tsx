@@ -579,10 +579,26 @@ export function openCoursePaymentReceipt(data: ReceiptData) {
   const years = data.courseDuration ? parseInt(data.courseDuration.split(" ")[0]) || 1 : 1;
   const suffix = (n: number) => (n === 1 ? "st" : n === 2 ? "nd" : n === 3 ? "rd" : "th");
 
-  // Per-year fee (for multi-year courses show the yearly breakdown)
-  const perYearFee = years > 1 ? Math.round(data.totalFees / years) : data.totalFees;
+  const getDurationInMonths = (durationStr: string): number => {
+    if (!durationStr) return 12;
+    const parts = durationStr.trim().split(/\s+/);
+    const val = parseInt(parts[0]) || 1;
+    const unit = parts[1] ? parts[1].toLowerCase() : "year";
+    if (unit.startsWith("year")) {
+      return val * 12;
+    }
+    return val;
+  };
+  let totalMonths = 12;
+  if (data.paymentType === "emi" && data.schedule && data.schedule.length > 0) {
+    totalMonths = data.schedule.length;
+  } else {
+    totalMonths = getDurationInMonths(data.courseDuration);
+  }
+  const monthlyFee = totalMonths > 0 ? Math.round(data.totalFees / totalMonths) : data.totalFees;
+
   const formattedAdmissionFee = formatCurrency(data.admissionFee ?? 5000);
-  const formattedPerYearFee = formatCurrency(perYearFee);
+  const formattedMonthlyFee = formatCurrency(monthlyFee);
   const formattedTotalFees = formatCurrency(data.totalFees);
 
   const relationMap: Record<string, string> = {
@@ -832,7 +848,7 @@ export function openCoursePaymentReceipt(data: ReceiptData) {
         <img src="${data.photoUrl}" alt="Student Photo" style="width:100%;height:100%;object-fit:cover;" />
       </div>
       ` : `
-      <div style="width:100px;height:120px;border:1.5px solid #000;flex-shrink:0;margin-left:auto;">
+      <div style="width:100px;height:120px;border:1.5px solid #000;flex-shrink:0;margin-left:auto;background-color:#f2f2f2;">
       </div>
       `}
     </div>
@@ -877,9 +893,9 @@ export function openCoursePaymentReceipt(data: ReceiptData) {
       <!-- Course Fees -->
       <div class="field-row">
         <span style="white-space:nowrap;">Course Fees</span>
-        <span class="field-line" style="max-width:120px;">&nbsp;${formattedPerYearFee}</span>
+        <span class="field-line" style="max-width:120px;">&nbsp;${formattedMonthlyFee}</span>
         <span style="white-space:nowrap;">&times;</span>
-        <span class="field-line" style="max-width:100px;text-align:center;">&nbsp;${years} Year${years > 1 ? "s" : ""}</span>
+        <span class="field-line" style="max-width:100px;text-align:center;">&nbsp;${totalMonths} Month${totalMonths > 1 ? "s" : ""}</span>
         <span style="white-space:nowrap;">=</span>
         <span class="field-line">&nbsp;${formattedTotalFees}</span>
         <span style="white-space:nowrap;">Total</span>

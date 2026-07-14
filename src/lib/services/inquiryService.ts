@@ -29,7 +29,7 @@ export interface InquiryData {
   email: string;
   addressLine1: string;
   addressLine2: string;
-  addressLine3: string;
+  addressLine3?: string;
   pincode: string;
   address?: string;
   interestedCourse: string;
@@ -72,7 +72,7 @@ export async function submitInquiryData(formData: InquiryData): Promise<{ succes
 
     // Build combined fields
     const fullName = [formData.firstName, formData.middleName, formData.lastName].filter(Boolean).join(" ");
-    const address = [formData.addressLine1, formData.addressLine2, formData.addressLine3, `Pincode: ${formData.pincode}`].filter(Boolean).join(", ");
+    const address = [formData.addressLine1, formData.addressLine2, `Pincode: ${formData.pincode}`].filter(Boolean).join(", ");
 
     const completeData: any = {
       ...formData,

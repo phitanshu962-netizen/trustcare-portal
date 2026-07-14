@@ -1287,11 +1287,10 @@ function InquiryProcessForm(formData) {
   ].filter(Boolean).join(" ");
 
   // Combine address for display in PDF and sheet
-  // This correctly aggregates addressLine1, addressLine2, addressLine3, pincode from the client.
+  // This correctly aggregates addressLine1, addressLine2, pincode from the client.
   formData.address = [
     formData.addressLine1,
     formData.addressLine2,
-    formData.addressLine3,
     `Pincode: ${formData.pincode}`
   ].filter(Boolean).join(", ");
 

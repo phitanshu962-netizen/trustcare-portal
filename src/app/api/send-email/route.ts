@@ -33,7 +33,10 @@ async function generatePdfReceiptBuffer(type: string, data: any): Promise<Buffer
 
   const studentName = data.studentName || 'Student';
   const receiptNo = data.receiptNo || 'N/A';
-  const date = data.date || new Date().toLocaleDateString('en-GB');
+  // Match browser format: "dd / mm / yyyy" with spaces around slashes
+  const date = data.date
+    ? data.date.replace(/\//g, ' / ')
+    : new Date().toLocaleDateString('en-GB').replace(/\//g, ' / ');
   const courseName = (data.courseName || '').replace(/_/g, ' ').toUpperCase();
   const paymentMode = data.paymentMode || 'N/A';
   const receivedBy = data.receivedBy || 'Authorized Officer';
@@ -83,7 +86,7 @@ async function generatePdfReceiptBuffer(type: string, data: any): Promise<Buffer
     if (fs.existsSync(logoPath)) {
       const logoBytes = fs.readFileSync(logoPath);
       const logoImage = await pdfDoc.embedPng(logoBytes);
-      
+
       // Draw watermark in center (opacity 0.05)
       page.drawImage(logoImage, {
         x: 187.5,
@@ -151,7 +154,7 @@ async function generatePdfReceiptBuffer(type: string, data: any): Promise<Buffer
   const badgeCenterX = 297.5;
   const badgeLeftCircleX = badgeCenterX - (badgeBoxWidth / 2) + 8;
   const badgeRightCircleX = badgeCenterX + (badgeBoxWidth / 2) - 8;
-  
+
   // Draw filled pill shape background using circles + rect
   page.drawCircle({ x: badgeLeftCircleX, y: 316, size: 8, color: blackColor });
   page.drawCircle({ x: badgeRightCircleX, y: 316, size: 8, color: blackColor });
@@ -162,7 +165,7 @@ async function generatePdfReceiptBuffer(type: string, data: any): Promise<Buffer
     height: 16,
     color: blackColor,
   });
-  
+
   // Badge text in white
   page.drawText(badgeLabel, {
     x: badgeCenterX - (badgeTextWidth / 2),
@@ -244,7 +247,7 @@ async function generatePdfReceiptBuffer(type: string, data: any): Promise<Buffer
 
   // 7. Purpose To Pay Checkboxes
   page.drawText("Purpose To Pay :", { x: 45, y: 181, size: 10, font: boldFont });
-  
+
   page.drawText("Admission Fee's", { x: 145, y: 181, size: 10, font: font });
   drawCheckbox(220, 181, isAdmission);
 
@@ -361,7 +364,52 @@ function wrapMixedText(text: string, maxWidth: number, fontSize: number, devanag
   return lines;
 }
 
-async function generatePdfAdmissionFormBuffer(data: any): Promise<Buffer> {
+function drawSuperscriptText(
+  page: any,
+  text: string,
+  x: number,
+  y: number,
+  size: number,
+  font: any,
+  color: any
+) {
+  const match = text.match(/^(\d+)(st|nd|rd|th)(.*)$/);
+  if (match) {
+    const num = match[1];
+    const suf = match[2];
+    const rest = match[3];
+
+    page.drawText(num, { x, y, size, font, color });
+    const numWidth = font.widthOfTextAtSize(num, size);
+
+    const sufSize = size * 0.65;
+    const sufY = y + (size * 0.35);
+    page.drawText(suf, { x: x + numWidth, y: sufY, size: sufSize, font, color });
+    const sufWidth = font.widthOfTextAtSize(suf, sufSize);
+
+    if (rest) {
+      page.drawText(rest, { x: x + numWidth + sufWidth, y, size, font, color });
+    }
+  } else {
+    page.drawText(text, { x, y, size, font, color });
+  }
+}
+
+function getSuperscriptTextWidth(text: string, size: number, font: any): number {
+  const match = text.match(/^(\d+)(st|nd|rd|th)(.*)$/);
+  if (match) {
+    const num = match[1];
+    const suf = match[2];
+    const rest = match[3];
+    const numWidth = font.widthOfTextAtSize(num, size);
+    const sufWidth = font.widthOfTextAtSize(suf, size * 0.65);
+    const restWidth = font.widthOfTextAtSize(rest, size);
+    return numWidth + sufWidth + restWidth;
+  }
+  return font.widthOfTextAtSize(text, size);
+}
+
+export async function generatePdfAdmissionFormBuffer(data: any): Promise<Buffer> {
   const pdfDoc = await PDFDocument.create();
   pdfDoc.registerFontkit(fontkit);
 
@@ -387,10 +435,10 @@ async function generatePdfAdmissionFormBuffer(data: any): Promise<Buffer> {
     console.error("Error embedding Geist font for Rupee symbol:", err);
   }
 
-  // Load Tiro Devanagari Marathi font for Marathi text
+  // Load Noto Sans Devanagari font for Marathi text
   let devanagariFont: any = null;
   try {
-    const fontPath = path.join(process.cwd(), 'public', 'fonts', 'TiroDevanagariMarathi-Regular.ttf');
+    const fontPath = path.join(process.cwd(), 'public', 'fonts', 'NotoSansDevanagari-Regular.ttf');
     if (fs.existsSync(fontPath)) {
       const fontBytes = fs.readFileSync(fontPath);
       devanagariFont = await pdfDoc.embedFont(fontBytes);
@@ -402,22 +450,53 @@ async function generatePdfAdmissionFormBuffer(data: any): Promise<Buffer> {
   const studentName = data.studentName || 'Student';
   const enrollmentId = data.enrollmentId || 'N/A';
   const receiptNo = data.receiptNo || 'N/A';
-  const date = data.date || new Date().toLocaleDateString('en-GB');
+  const date = data.date
+    ? data.date.replace(/\//g, ' / ')
+    : new Date().toLocaleDateString('en-GB').replace(/\//g, ' / ');
   const courseName = (data.courseName || '').replace(/_/g, ' ').toUpperCase();
   const courseDuration = data.courseDuration || 'N/A';
   const totalFees = data.totalFees || 0;
   const admissionFee = data.admissionFee || 0;
   const paymentMode = data.paymentMode || 'N/A';
-  const guardianName = data.guardianName || 'N/A';
-  const guardianRelation = data.guardianRelation || 'N/A';
+  const guardianName = data.guardianName || '';
+  const guardianRelation = data.guardianRelation || '';
   const branch = (data.branch || 'Mankhurd').toUpperCase();
   const photoUrl = data.photoUrl || '';
   const email = data.email || 'N/A';
   const schedule = data.schedule || [];
   const totalPayable = data.totalPayable || totalFees;
+  const paymentType = data.paymentType || '';
+
+  const relationMap: Record<string, string> = {
+    "Mother": "आई",
+    "Father": "वडील",
+    "Husband": "पती",
+    "Wife": "पत्नी",
+    "Sister": "बहीण",
+    "Brother": "भाऊ",
+    "Guardian": "पालक"
+  };
+  const engRelation = guardianRelation ? `${guardianRelation} of` : "Guardian of";
+  const marathiRelation = guardianRelation ? (relationMap[guardianRelation] || "पालक") : "पालक";
 
   const years = courseDuration ? parseInt(courseDuration.split(" ")[0]) || 1 : 1;
-  const perYearFee = years > 1 ? Math.round(totalFees / years) : totalFees;
+  const getDurationInMonths = (durationStr: string): number => {
+    if (!durationStr) return 12;
+    const parts = durationStr.trim().split(/\s+/);
+    const val = parseInt(parts[0]) || 1;
+    const unit = parts[1] ? parts[1].toLowerCase() : "year";
+    if (unit.startsWith("year")) {
+      return val * 12;
+    }
+    return val;
+  };
+  let totalMonths = 12;
+  if (paymentType === "emi" && schedule && schedule.length > 0) {
+    totalMonths = schedule.length;
+  } else {
+    totalMonths = getDurationInMonths(courseDuration);
+  }
+  const monthlyFee = totalMonths > 0 ? Math.round(totalFees / totalMonths) : totalFees;
 
   const darkGreen = rgb(0.004, 0.196, 0.125); // #013220
   const blackColor = rgb(0, 0, 0);
@@ -452,45 +531,112 @@ async function generatePdfAdmissionFormBuffer(data: any): Promise<Buffer> {
     }
   };
 
-  const drawMixedText = async (targetPage: any, text: string, x: number, y: number, fontSize: number, options: any = {}) => {
+  let canvasFontRegistered = false;
+  const drawMixedText = async (targetPage: any, text: string, x: number, y: number, fontSize: number, options: any = {}): Promise<number> => {
+    const isDevanagari = /[\u0900-\u097F]/.test(text);
+    const color = options.color || blackColor;
+
+    if (isDevanagari) {
+      try {
+        const { createCanvas, registerFont } = require('canvas');
+        if (!canvasFontRegistered) {
+          const fontPath = path.join(process.cwd(), 'public', 'fonts', 'NotoSansDevanagari-Regular.ttf');
+          if (fs.existsSync(fontPath)) {
+            registerFont(fontPath, { family: 'Noto Sans Devanagari' });
+          }
+          canvasFontRegistered = true;
+        }
+
+        const tempCanvas = createCanvas(10, 10);
+        const tempCtx = tempCanvas.getContext('2d');
+        const isBold = options.font === boldFont;
+        // Use italic font for Marathi points if requested
+        const isItalic = options.italic ? 'italic ' : '';
+        tempCtx.font = `${isItalic}${isBold ? 'bold ' : ''}${fontSize}px "Noto Sans Devanagari", "Arial", sans-serif`;
+
+        const textWidth = Math.ceil(tempCtx.measureText(text).width);
+        const textHeight = Math.ceil(fontSize * 1.5);
+
+        if (textWidth > 0) {
+          const scale = 4;
+          const canvas = createCanvas(textWidth * scale, textHeight * scale);
+          const ctx = canvas.getContext('2d');
+          ctx.scale(scale, scale);
+          ctx.font = tempCtx.font;
+
+          const r = Math.round(color.red * 255);
+          const g = Math.round(color.green * 255);
+          const b = Math.round(color.blue * 255);
+          ctx.fillStyle = `rgb(${r},${g},${b})`;
+          ctx.textBaseline = 'top';
+          ctx.fillText(text, 0, 0);
+
+          const buffer = canvas.toBuffer('image/png');
+          const img = await pdfDoc.embedPng(buffer);
+
+          let drawX = x;
+          if (options.align === 'center') {
+            drawX = ((options.pageWidth || 595) - textWidth) / 2;
+          }
+
+          targetPage.drawImage(img, {
+            x: drawX,
+            y: y - fontSize * 0.25,
+            width: textWidth,
+            height: textHeight
+          });
+          return textWidth;
+        }
+      } catch (err) {
+        console.error("Canvas rendering failed for Marathi text, falling back to pdf-lib:", err);
+      }
+    }
+
+    // Fallback
     const regex = /([\u0900-\u097F]+)/g;
     const parts = text.split(regex);
-    let currentX = x;
-    const color = options.color || blackColor;
     
+    // Calculate total width first if we need centering
+    let totalWidth = 0;
     for (const part of parts) {
       if (!part) continue;
       const isDev = /[\u0900-\u097F]/.test(part);
       const selectedFont = isDev ? (devanagariFont || boldFont) : boldFont;
       const cleanPart = part.replace(/—/g, '-');
-      
+      try {
+        totalWidth += selectedFont.widthOfTextAtSize(cleanPart, fontSize);
+      } catch {
+        totalWidth += cleanPart.length * (fontSize * 0.5);
+      }
+    }
+
+    let drawX = x;
+    if (options.align === 'center') {
+      drawX = ((options.pageWidth || 595) - totalWidth) / 2;
+    }
+    const startX = drawX;
+
+    for (const part of parts) {
+      if (!part) continue;
+      const isDev = /[\u0900-\u097F]/.test(part);
+      const selectedFont = isDev ? (devanagariFont || boldFont) : boldFont;
+      const cleanPart = part.replace(/—/g, '-');
+
       try {
         targetPage.drawText(cleanPart, {
-          x: currentX,
+          x: drawX,
           y,
           size: fontSize,
           font: selectedFont,
           color,
           ...options
         });
-        currentX += selectedFont.widthOfTextAtSize(cleanPart, fontSize);
+        drawX += selectedFont.widthOfTextAtSize(cleanPart, fontSize);
       } catch (err) {
-        console.error("Error drawing mixed text part:", cleanPart, err);
-        try {
-          targetPage.drawText(cleanPart, {
-            x: currentX,
-            y,
-            size: fontSize,
-            font: boldFont,
-            color,
-            ...options
-          });
-          currentX += boldFont.widthOfTextAtSize(cleanPart, fontSize);
-        } catch {
-          currentX += cleanPart.length * (fontSize * 0.5);
-        }
+        drawX += cleanPart.length * (fontSize * 0.5);
       }
     }
+    return drawX - startX;
   };
 
   // Helper to draw border & layout
@@ -519,12 +665,12 @@ async function generatePdfAdmissionFormBuffer(data: any): Promise<Buffer> {
           height: logoDims.height,
         });
 
-        // Watermark (Opacity 0.08, centered, 400x400)
+        // Watermark (Opacity 0.08, centered, matching browser background-size: 825px)
         targetPage.drawImage(logoImage, {
-          x: 97.5,
-          y: 221,
-          width: 400,
-          height: 400,
+          x: -11.5,
+          y: 115,
+          width: 618,
+          height: 618,
           opacity: 0.08,
         });
       }
@@ -534,7 +680,7 @@ async function generatePdfAdmissionFormBuffer(data: any): Promise<Buffer> {
 
     // Title text
     targetPage.drawText("TRUSTCARE INSTITUTE OF HEALTH SCIENCE", {
-      x: 135,
+      x: 140,
       y: 765,
       size: 15.3,
       font: boldFont,
@@ -542,67 +688,81 @@ async function generatePdfAdmissionFormBuffer(data: any): Promise<Buffer> {
     });
 
     // Contact line with red circles
-    targetPage.drawText("Email: trustcareinstitute03@gmail.com", { x: 135, y: 745, size: 9, font: boldFont, color: blackColor });
-    targetPage.drawText("|", { x: 295, y: 745, size: 9, font: boldFont, color: grayColor });
-    
-    targetPage.drawCircle({ x: 310, y: 748, size: 6, color: rgb(0.82, 0.18, 0.18) });
-    targetPage.drawText("+91 9967340243", { x: 320, y: 745, size: 9, font: boldFont, color: blackColor });
+    targetPage.drawText("Email: trustcareinstitute03@gmail.com", { x: 140, y: 745, size: 9, font: boldFont, color: blackColor });
+    targetPage.drawText("|", { x: 300, y: 745, size: 9, font: boldFont, color: grayColor });
 
-    targetPage.drawText("|", { x: 390, y: 745, size: 9, font: boldFont, color: grayColor });
-    
-    targetPage.drawCircle({ x: 405, y: 748, size: 6, color: rgb(0.82, 0.18, 0.18) });
-    targetPage.drawText("+91 9967288158", { x: 415, y: 745, size: 9, font: boldFont, color: blackColor });
+    targetPage.drawCircle({ x: 315, y: 748, size: 6.75, color: rgb(0.82, 0.18, 0.18) });
+    // Phone icon character inside the circle for matching browser
+    try {
+      targetPage.drawText("☎", { x: 311.5, y: 744.5, size: 8, font: devanagariFont || font, color: rgb(1, 1, 1) });
+    } catch (e) {
+      console.warn("Skipping rendering of phone icon character:", e);
+    }
+    targetPage.drawText("+91 9967340243", { x: 325, y: 745, size: 9, font: boldFont, color: blackColor });
+
+    targetPage.drawText("|", { x: 405, y: 745, size: 9, font: boldFont, color: grayColor });
+
+    targetPage.drawCircle({ x: 420, y: 748, size: 6.75, color: rgb(0.82, 0.18, 0.18) });
+    try {
+      targetPage.drawText("☎", { x: 416.5, y: 744.5, size: 8, font: devanagariFont || font, color: rgb(1, 1, 1) });
+    } catch (e) {
+      console.warn("Skipping rendering of phone icon character:", e);
+    }
+    targetPage.drawText("+91 9967288158", { x: 430, y: 745, size: 9, font: boldFont, color: blackColor });
 
     // Address banner with top/bottom double lines
-    targetPage.drawLine({ start: { x: 45, y: 706 }, end: { x: 550, y: 706 }, thickness: 1.5, color: blackColor });
+    targetPage.drawLine({ start: { x: 35, y: 706 }, end: { x: 560, y: 706 }, thickness: 1.5, color: blackColor });
 
     const addressText = "TRUSTCARE INSTITUTE OF HEALTH SCIENCE, 1ST FLOOR, SHIVSENA OFFICE, BHARAT NAGAR, MANKHURD, MUMBAI - 400 088.";
+    const addrWidth = boldFont.widthOfTextAtSize(addressText, 8);
+    const addrX = 35 + (525 - addrWidth) / 2;
     targetPage.drawText(addressText, {
-      x: 48,
+      x: addrX,
       y: 694,
-      size: 6.8,
+      size: 8,
       font: boldFont,
       color: blackColor,
     });
 
-    targetPage.drawLine({ start: { x: 45, y: 688 }, end: { x: 550, y: 688 }, thickness: 1.5, color: blackColor });
+    targetPage.drawLine({ start: { x: 35, y: 688 }, end: { x: 560, y: 688 }, thickness: 1.5, color: blackColor });
   };
 
   const drawBottomSection = async (targetPage: any) => {
     // Dashed line
     targetPage.drawLine({
-      start: { x: 45, y: 140 },
-      end: { x: 550, y: 140 },
-      thickness: 0.8,
+      start: { x: 35, y: 140 },
+      end: { x: 560, y: 140 },
+      thickness: 1.2,
       color: grayColor,
       dashArray: [3, 3]
     });
 
     // English declaration
-    const engDecl = `I Am Mr./Ms : ${guardianName}  ${guardianRelation} of ${studentName} — I Agree with Terms And Condition.`;
+    const engDecl = `I Am Mr./Ms : ${guardianName}  ${engRelation} ${studentName} — I Agree with Terms And Condition.`;
     targetPage.drawText(engDecl, {
-      x: 45,
+      x: 35,
       y: 122,
-      size: 8,
+      size: 9,
       font: boldFont,
       color: blackColor
     });
 
     // Marathi declaration
-    const marDecl = `मी श्री/ श्रीमती ${guardianName}, ${guardianRelation} आई/वडील/पती/बहीण/भाऊ — मला सर्व अटी मंजूर आहेत.`;
-    await drawMixedText(targetPage, marDecl, 45, 107, 8.5, {
+    const marDecl = `मा.श्री./श्रीमती ${guardianName} ${marathiRelation} — मला सर्व अटी मंजूर आहेत.`;
+    await drawMixedText(targetPage, marDecl, 35, 107, 9, {
+      font: boldFont,
       color: blackColor
     });
 
     // Signatures
-    targetPage.drawLine({ start: { x: 45, y: 55 }, end: { x: 180, y: 55 }, thickness: 0.8, color: blackColor });
-    targetPage.drawText("Parent's Sign.", { x: 80, y: 42, size: 8.5, font: boldFont });
+    targetPage.drawLine({ start: { x: 35, y: 55 }, end: { x: 170, y: 55 }, thickness: 1.1, color: blackColor });
+    targetPage.drawText("Parent's Sign.", { x: 72, y: 42, size: 9, font: boldFont });
 
-    targetPage.drawLine({ start: { x: 220, y: 55 }, end: { x: 350, y: 55 }, thickness: 0.8, color: blackColor });
-    targetPage.drawText("Student Sign.", { x: 255, y: 42, size: 8.5, font: boldFont });
+    targetPage.drawLine({ start: { x: 220, y: 55 }, end: { x: 350, y: 55 }, thickness: 1.1, color: blackColor });
+    targetPage.drawText("Student Sign.", { x: 255, y: 42, size: 9, font: boldFont });
 
-    targetPage.drawLine({ start: { x: 390, y: 55 }, end: { x: 550, y: 55 }, thickness: 0.8, color: blackColor });
-    targetPage.drawText("Authorised Sign./Stamp", { x: 415, y: 42, size: 8.5, font: boldFont });
+    targetPage.drawLine({ start: { x: 390, y: 55 }, end: { x: 560, y: 55 }, thickness: 1.1, color: blackColor });
+    targetPage.drawText("Authorised Sign./Stamp", { x: 420, y: 42, size: 9, font: boldFont });
   };
 
   // Build Page 1
@@ -613,7 +773,7 @@ async function generatePdfAdmissionFormBuffer(data: any): Promise<Buffer> {
   const bannerHeight1 = 26;
   const bannerX1 = (595 - bannerWidth1) / 2;
   const bannerY1 = 650;
-  const path1 = `M ${bannerX1 + 11} ${bannerY1} L ${bannerX1 + bannerWidth1} ${bannerY1} L ${bannerX1 + bannerWidth1 - 11} ${bannerY1 + bannerHeight1} L ${bannerX1} ${bannerY1 + bannerHeight1} Z`;
+  const path1 = `M ${bannerX1 + 15} ${bannerY1} L ${bannerX1 + bannerWidth1} ${bannerY1} L ${bannerX1 + bannerWidth1 - 15} ${bannerY1 + bannerHeight1} L ${bannerX1} ${bannerY1 + bannerHeight1} Z`;
   page.drawSvgPath(path1, { color: tealBlueColor });
 
   page.drawText("ADMISSION FORM", {
@@ -636,13 +796,13 @@ async function generatePdfAdmissionFormBuffer(data: any): Promise<Buffer> {
         photoImg = await pdfDoc.embedPng(photoBuffer);
       }
       page.drawImage(photoImg, {
-        x: 475,
+        x: 485,
         y: 715,
         width: 75,
         height: 90,
       });
       page.drawRectangle({
-        x: 475,
+        x: 485,
         y: 715,
         width: 75,
         height: 90,
@@ -657,7 +817,7 @@ async function generatePdfAdmissionFormBuffer(data: any): Promise<Buffer> {
   }
   if (!photoDrawn) {
     page.drawRectangle({
-      x: 475,
+      x: 485,
       y: 715,
       width: 75,
       height: 90,
@@ -668,53 +828,59 @@ async function generatePdfAdmissionFormBuffer(data: any): Promise<Buffer> {
   }
 
   // Receipt No & Date
-  page.drawText("Receipt No.", { x: 45, y: 625, size: 10.5, font: boldFont });
-  page.drawText(receiptNo, { x: 110, y: 625, size: 10.5, font: font });
-  page.drawLine({ start: { x: 108, y: 623 }, end: { x: 250, y: 623 }, thickness: 1, color: blackColor });
+  page.drawText("Receipt No.", { x: 35, y: 625, size: 10.5, font: boldFont });
+  page.drawText(receiptNo, { x: 100, y: 625, size: 10.5, font: boldFont });
+  page.drawLine({ start: { x: 98, y: 623 }, end: { x: 250, y: 623 }, thickness: 1, color: blackColor });
 
   page.drawText("Date :", { x: 330, y: 625, size: 10.5, font: boldFont });
-  page.drawText(date, { x: 365, y: 625, size: 10.5, font: font });
+  page.drawText(date, { x: 365, y: 625, size: 10.5, font: boldFont });
   page.drawLine({ start: { x: 363, y: 623 }, end: { x: 480, y: 623 }, thickness: 1, color: blackColor });
 
   // Rows of details (aligned nicely with lines)
-  page.drawText("Student Name", { x: 45, y: 600, size: 10.5, font: boldFont });
-  page.drawText(studentName, { x: 125, y: 600, size: 10.5, font: font });
-  page.drawLine({ start: { x: 123, y: 598 }, end: { x: 550, y: 598 }, thickness: 1, color: blackColor });
+  page.drawText("Student Name", { x: 35, y: 600, size: 10.5, font: boldFont });
+  page.drawText(studentName, { x: 115, y: 600, size: 10.5, font: boldFont });
+  page.drawLine({ start: { x: 113, y: 598 }, end: { x: 560, y: 598 }, thickness: 1, color: blackColor });
 
-  page.drawText("Course Name", { x: 45, y: 575, size: 10.5, font: boldFont });
-  page.drawText(courseName, { x: 125, y: 575, size: 10.5, font: font });
-  page.drawLine({ start: { x: 123, y: 573 }, end: { x: 550, y: 573 }, thickness: 1, color: blackColor });
-  
+  page.drawText("Course Name", { x: 35, y: 575, size: 10.5, font: boldFont });
+  page.drawText(courseName, { x: 115, y: 575, size: 10.5, font: boldFont });
+  page.drawLine({ start: { x: 113, y: 573 }, end: { x: 560, y: 573 }, thickness: 1, color: blackColor });
+
   // Row 3
-  page.drawText("Course Duration", { x: 45, y: 550, size: 10.5, font: boldFont });
-  page.drawText(courseDuration, { x: 135, y: 550, size: 10.5, font: font });
-  page.drawLine({ start: { x: 133, y: 548 }, end: { x: 280, y: 548 }, thickness: 1, color: blackColor });
+  page.drawText("Course Duration", { x: 35, y: 550, size: 10.5, font: boldFont });
+  page.drawText(courseDuration, { x: 125, y: 550, size: 10.5, font: boldFont });
+  page.drawLine({ start: { x: 123, y: 548 }, end: { x: 270, y: 548 }, thickness: 1, color: blackColor });
 
-  page.drawText("Admission Fees", { x: 295, y: 550, size: 10.5, font: boldFont });
-  drawRupeeSymbol(page, 390, 550, 10.5);
-  page.drawText(admissionFee.toLocaleString('en-IN'), { x: 400, y: 550, size: 10.5, font: font });
-  page.drawLine({ start: { x: 388, y: 548 }, end: { x: 550, y: 548 }, thickness: 1, color: blackColor });
+  page.drawText("Admission Fees", { x: 285, y: 550, size: 10.5, font: boldFont });
+  drawRupeeSymbol(page, 380, 550, 10.5);
+  page.drawText(admissionFee.toLocaleString('en-IN'), { x: 390, y: 550, size: 10.5, font: boldFont });
+  page.drawLine({ start: { x: 378, y: 548 }, end: { x: 560, y: 548 }, thickness: 1, color: blackColor });
 
   // Row 4
-  page.drawText("Course Fees", { x: 45, y: 525, size: 10.5, font: boldFont });
-  drawRupeeSymbol(page, 120, 525, 10.5);
-  page.drawText(perYearFee.toLocaleString('en-IN'), { x: 130, y: 525, size: 10.5, font: font });
-  page.drawLine({ start: { x: 118, y: 523 }, end: { x: 215, y: 523 }, thickness: 1, color: blackColor });
+  page.drawText("Course Fees", { x: 35, y: 525, size: 10.5, font: boldFont });
+  drawRupeeSymbol(page, 110, 525, 10.5);
+  page.drawText(monthlyFee.toLocaleString('en-IN'), { x: 120, y: 525, size: 10.5, font: boldFont });
+  page.drawLine({ start: { x: 108, y: 523 }, end: { x: 205, y: 523 }, thickness: 1, color: blackColor });
 
-  page.drawText("x", { x: 225, y: 525, size: 10.5, font: font });
-  page.drawText(`${years} Year${years > 1 ? 's' : ''}`, { x: 245, y: 525, size: 10.5, font: font });
-  page.drawLine({ start: { x: 240, y: 523 }, end: { x: 300, y: 523 }, thickness: 1, color: blackColor });
+  page.drawText("×", { x: 215, y: 525, size: 10.5, font: boldFont });
+  page.drawText(`${totalMonths} Month${totalMonths > 1 ? 's' : ''}`, { x: 235, y: 525, size: 10.5, font: boldFont });
+  page.drawLine({ start: { x: 230, y: 523 }, end: { x: 290, y: 523 }, thickness: 1, color: blackColor });
 
-  page.drawText("=", { x: 310, y: 525, size: 10.5, font: font });
-  drawRupeeSymbol(page, 330, 525, 10.5);
-  page.drawText(totalFees.toLocaleString('en-IN'), { x: 340, y: 525, size: 10.5, font: font });
-  page.drawLine({ start: { x: 328, y: 523 }, end: { x: 430, y: 523 }, thickness: 1, color: blackColor });
-  page.drawText("Total", { x: 440, y: 525, size: 10.5, font: boldFont });
+  page.drawText("=", { x: 300, y: 525, size: 10.5, font: boldFont });
+  drawRupeeSymbol(page, 320, 525, 10.5);
+  page.drawText(totalFees.toLocaleString('en-IN'), { x: 330, y: 525, size: 10.5, font: boldFont });
+  page.drawLine({ start: { x: 318, y: 523 }, end: { x: 420, y: 523 }, thickness: 1, color: blackColor });
+  page.drawText("Total", { x: 430, y: 525, size: 10.5, font: boldFont });
 
   // Row 5: Exam Fees
-  page.drawText("Exam Fees", { x: 45, y: 500, size: 10.5, font: boldFont });
-  page.drawText("As Applicable", { x: 125, y: 500, size: 10.5, font: font });
-  page.drawLine({ start: { x: 123, y: 498 }, end: { x: 550, y: 498 }, thickness: 1, color: blackColor });
+  page.drawText("Exam Fees", { x: 35, y: 500, size: 10.5, font: boldFont });
+  const examFee = data.examFee;
+  if (examFee != null && examFee > 0) {
+    drawRupeeSymbol(page, 115, 500, 10.5);
+    page.drawText(examFee.toLocaleString('en-IN'), { x: 125, y: 500, size: 10.5, font: boldFont });
+  } else {
+    page.drawText("As Applicable", { x: 115, y: 500, size: 10.5, font: boldFont });
+  }
+  page.drawLine({ start: { x: 113, y: 498 }, end: { x: 560, y: 498 }, thickness: 1, color: blackColor });
 
   // Draw Horizontal 12-Month Calendar grid
   let tableEndY = 455;
@@ -767,28 +933,22 @@ async function generatePdfAdmissionFormBuffer(data: any): Promise<Buffer> {
       }
 
       // Title above the table
-      const tableTitle = `${y + 1}${suffix(y + 1)} Year Fee's`;
-      page.drawText(tableTitle, {
-        x: 45,
-        y: currentTblY + 4,
-        size: 9,
-        font: boldFont,
-        color: blackColor,
-      });
+      const tableTitle = `${y + 1}${suffix(y + 1)} Year Fee's ${startYear + y}`;
+      drawSuperscriptText(page, tableTitle, 35, currentTblY + 4, 9.75, boldFont, blackColor);
 
       currentTblY -= 16; // Start table header
 
-      const colWidth = 505 / 12; // 42.08
+      const colWidth = 525 / 12; // 43.75
       const row1Height = 16;
       const row2Height = 24;
 
-      // Draw header background rectangle
+      // Draw header background rectangle (white to match browser)
       page.drawRectangle({
-        x: 45,
+        x: 35,
         y: currentTblY,
-        width: 505,
+        width: 525,
         height: row1Height,
-        color: lightGrayColor,
+        color: rgb(1, 1, 1),
       });
 
       // Draw cells
@@ -800,17 +960,12 @@ async function generatePdfAdmissionFormBuffer(data: any): Promise<Buffer> {
         const validDay = getValidDayForMonth(targetYear, mi, day);
         const dateLabel = `${validDay}${getDaySuffix(validDay)} ${monthLabels[mi]}`;
 
-        const cellX = 45 + mi * colWidth;
+        const cellX = 35 + mi * colWidth;
 
         // Draw date text centered in header cell
-        const dateTextWidth = font.widthOfTextAtSize(dateLabel, 6);
-        page.drawText(dateLabel, {
-          x: cellX + (colWidth - dateTextWidth) / 2,
-          y: currentTblY + 5,
-          size: 6,
-          font: boldFont,
-          color: blackColor,
-        });
+        const dateTextWidth = getSuperscriptTextWidth(dateLabel, 7.2, boldFont);
+        const drawX = cellX + (colWidth - dateTextWidth) / 2;
+        drawSuperscriptText(page, dateLabel, drawX, currentTblY + 5, 7.2, boldFont, blackColor);
 
         // Draw vertical column line for header
         if (mi > 0) {
@@ -825,8 +980,8 @@ async function generatePdfAdmissionFormBuffer(data: any): Promise<Buffer> {
 
       // Draw header bottom line
       page.drawLine({
-        start: { x: 45, y: currentTblY },
-        end: { x: 550, y: currentTblY },
+        start: { x: 35, y: currentTblY },
+        end: { x: 560, y: currentTblY },
         thickness: 1.5,
         color: blackColor,
       });
@@ -836,21 +991,22 @@ async function generatePdfAdmissionFormBuffer(data: any): Promise<Buffer> {
       // Draw amount cells
       for (let mi = 0; mi < 12; mi++) {
         const inst = grid[mi];
-        const cellX = 45 + mi * colWidth;
+        const cellX = 35 + mi * colWidth;
 
         if (inst) {
           const amtStr = `${inst.amount.toLocaleString("en-IN")}`;
-          const amtTextWidth = font.widthOfTextAtSize(amtStr, 7.5);
-          
+          const amtTextWidth = boldFont.widthOfTextAtSize(amtStr, 7.2);
+          const rupeeWidth = rupeeFont ? rupeeFont.widthOfTextAtSize('₹', 7.2) : font.widthOfTextAtSize('Rs.', 7.2);
+
           // Draw Rupee symbol and amount centered
-          const totalWidth = 6 + amtTextWidth;
+          const totalWidth = rupeeWidth + 1 + amtTextWidth;
           const startDrawX = cellX + (colWidth - totalWidth) / 2;
-          
-          drawRupeeSymbol(page, startDrawX, currentTblY + 8, 7.5);
+
+          drawRupeeSymbol(page, startDrawX, currentTblY + 8, 7.2);
           page.drawText(amtStr, {
-            x: startDrawX + 7,
+            x: startDrawX + rupeeWidth + 1,
             y: currentTblY + 8,
-            size: 7.5,
+            size: 7.2,
             font: boldFont,
             color: blackColor,
           });
@@ -869,9 +1025,9 @@ async function generatePdfAdmissionFormBuffer(data: any): Promise<Buffer> {
 
       // Draw outer table borders
       page.drawRectangle({
-        x: 45,
+        x: 35,
         y: currentTblY,
-        width: 505,
+        width: 525,
         height: row1Height + row2Height,
         borderWidth: 1.5,
         borderColor: blackColor,
@@ -888,7 +1044,7 @@ async function generatePdfAdmissionFormBuffer(data: any): Promise<Buffer> {
   page.drawText("Total Payable :", { x: 350, y: totalPayableY, size: 11, font: boldFont });
   drawRupeeSymbol(page, 435, totalPayableY, 11);
   page.drawText(totalPayable.toLocaleString('en-IN'), { x: 447, y: totalPayableY, size: 12, font: boldFont });
-  page.drawLine({ start: { x: 350, y: totalPayableY - 4 }, end: { x: 550, y: totalPayableY - 4 }, thickness: 1.5, color: blackColor });
+  page.drawLine({ start: { x: 350, y: totalPayableY - 4 }, end: { x: 560, y: totalPayableY - 4 }, thickness: 1.5, color: blackColor });
 
   // Draw Bottom Section on Page 1
   await drawBottomSection(page);
@@ -898,15 +1054,16 @@ async function generatePdfAdmissionFormBuffer(data: any): Promise<Buffer> {
   await drawBasePageTemplate(page2);
 
   // Draw Title Banner: हमी पत्र / UNDER TAKING (Teal Blue #14507a)
-  const bannerWidth2 = 250;
+  const bannerWidth2 = 240;
   const bannerHeight2 = 26;
   const bannerX2 = (595 - bannerWidth2) / 2;
   const bannerY2 = 650;
-  const path2 = `M ${bannerX2 + 11} ${bannerY2} L ${bannerX2 + bannerWidth2} ${bannerY2} L ${bannerX2 + bannerWidth2 - 11} ${bannerY2 + bannerHeight2} L ${bannerX2} ${bannerY2 + bannerHeight2} Z`;
+  const path2 = `M ${bannerX2 + 15} ${bannerY2} L ${bannerX2 + bannerWidth2} ${bannerY2} L ${bannerX2 + bannerWidth2 - 15} ${bannerY2 + bannerHeight2} L ${bannerX2} ${bannerY2 + bannerHeight2} Z`;
   page2.drawSvgPath(path2, { color: tealBlueColor });
-  
-  await drawMixedText(page2, "हमी पत्र / UNDER TAKING", (595 - 200) / 2, 658, 13.5, { color: rgb(1, 1, 1), font: boldFont });
 
+  await drawMixedText(page2, "हमी पत्र / UNDER TAKING", 0, 658, 13.5, { color: rgb(1, 1, 1), font: boldFont, align: 'center' });
+
+  let currentPage = page2;
   let page2Y = 645;
 
   // Marathi Points
@@ -927,31 +1084,41 @@ async function generatePdfAdmissionFormBuffer(data: any): Promise<Buffer> {
 
   for (let i = 0; i < mrPoints.length; i++) {
     const text = mrPoints[i];
-    const wrappedLines = wrapMixedText(text, 487, 8, devanagariFont, boldFont);
+    const wrappedLines = wrapMixedText(text, 507, 8, devanagariFont, boldFont);
     for (let j = 0; j < wrappedLines.length; j++) {
+      if (page2Y - 12 < 150) {
+        currentPage = pdfDoc.addPage([595, 842]);
+        await drawBasePageTemplate(currentPage);
+        page2Y = 645;
+      }
       page2Y -= 12;
       if (j === 0) {
         // Draw blue index
-        page2.drawText(`${i + 1}.`, {
-          x: 45,
+        currentPage.drawText(`${i + 1}.`, {
+          x: 35,
           y: page2Y,
-          size: 8,
+          size: 8.25,
           font: boldFont,
           color: tealBlueColor,
         });
       }
       // Draw text
-      await drawMixedText(page2, wrappedLines[j], 63, page2Y, 8.25, { color: blackColor, italic: true });
+      await drawMixedText(currentPage, wrappedLines[j], 53, page2Y, 8.25, { font: boldFont, color: blackColor, italic: true });
     }
     page2Y -= 2;
   }
 
   // Dashed separator line
+  if (page2Y - 12 < 150) {
+    currentPage = pdfDoc.addPage([595, 842]);
+    await drawBasePageTemplate(currentPage);
+    page2Y = 645;
+  }
   page2Y -= 8;
-  page2.drawLine({
-    start: { x: 45, y: page2Y },
-    end: { x: 550, y: page2Y },
-    thickness: 0.8,
+  currentPage.drawLine({
+    start: { x: 35, y: page2Y },
+    end: { x: 560, y: page2Y },
+    thickness: 1.2,
     color: grayColor,
     dashArray: [3, 3]
   });
@@ -976,24 +1143,29 @@ async function generatePdfAdmissionFormBuffer(data: any): Promise<Buffer> {
 
   for (let i = 0; i < enPoints.length; i++) {
     const text = enPoints[i];
-    const wrappedLines = wrapMixedText(text, 487, 8, devanagariFont, boldFont);
+    const wrappedLines = wrapMixedText(text, 507, 8, devanagariFont, boldFont);
     for (let j = 0; j < wrappedLines.length; j++) {
+      if (page2Y - 12 < 150) {
+        currentPage = pdfDoc.addPage([595, 842]);
+        await drawBasePageTemplate(currentPage);
+        page2Y = 645;
+      }
       page2Y -= 12;
       if (j === 0) {
         // Draw blue index
-        page2.drawText(`${i + 1}.`, {
-          x: 45,
+        currentPage.drawText(`${i + 1}.`, {
+          x: 35,
           y: page2Y,
-          size: 8,
+          size: 8.25,
           font: boldFont,
           color: tealBlueColor,
         });
       }
       // Draw text
-      page2.drawText(wrappedLines[j], {
-        x: 63,
+      currentPage.drawText(wrappedLines[j], {
+        x: 53,
         y: page2Y,
-        size: 8,
+        size: 8.25,
         font: boldFont,
         color: blackColor,
       });
@@ -1001,8 +1173,8 @@ async function generatePdfAdmissionFormBuffer(data: any): Promise<Buffer> {
     page2Y -= 2;
   }
 
-  // Draw Bottom Section on Page 2
-  await drawBottomSection(page2);
+  // Draw Bottom Section on the final page of Undertaking
+  await drawBottomSection(currentPage);
 
   const bytes = await pdfDoc.save();
   return Buffer.from(bytes);
@@ -1193,7 +1365,7 @@ export async function POST(req: Request) {
         pdfBuffer = await generatePdfReceiptBuffer(type, data);
       }
       const base64Content = pdfBuffer.toString('base64');
-      
+
       let filename = type === 'admission_form'
         ? `admission_form_${(data.enrollmentId || 'details').replace(/\//g, '-')}.pdf`
         : `receipt_${(data.receiptNo || 'details').replace(/\//g, '-')}.pdf`;

@@ -41,7 +41,6 @@ export default function InquiryView({ userProfile, onTakeAdmission }: InquiryVie
     email: "",
     addressLine1: "",
     addressLine2: "",
-    addressLine3: "",
     pincode: "",
     interestedCourse: "",
     inquiryTakenBy: userProfile?.username || "",
@@ -172,7 +171,7 @@ export default function InquiryView({ userProfile, onTakeAdmission }: InquiryVie
 
     // Set combined full name before sending
     const fullName = [formData.firstName, formData.middleName, formData.lastName].filter(Boolean).join(" ");
-    const address = [formData.addressLine1, formData.addressLine2, formData.addressLine3, `Pincode: ${formData.pincode}`].filter(Boolean).join(", ");
+    const address = [formData.addressLine1, formData.addressLine2, `Pincode: ${formData.pincode}`].filter(Boolean).join(", ");
 
     onTakeAdmission({
       ...formData,
@@ -464,7 +463,7 @@ export default function InquiryView({ userProfile, onTakeAdmission }: InquiryVie
           <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Address Information</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 md:col-span-2">
               <label htmlFor="addressLine1" className="block text-xs font-semibold text-slate-400">Address Line 1*</label>
               <input
                 type="text"
@@ -483,17 +482,6 @@ export default function InquiryView({ userProfile, onTakeAdmission }: InquiryVie
                 id="addressLine2"
                 name="addressLine2"
                 value={formData.addressLine2}
-                onChange={handleInputChange}
-                className="w-full bg-slate-950/80 border border-slate-855 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-teal-500/50 transition-colors font-medium"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label htmlFor="addressLine3" className="block text-xs font-semibold text-slate-400">Address Line 3</label>
-              <input
-                type="text"
-                id="addressLine3"
-                name="addressLine3"
-                value={formData.addressLine3}
                 onChange={handleInputChange}
                 className="w-full bg-slate-950/80 border border-slate-855 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-teal-500/50 transition-colors font-medium"
               />

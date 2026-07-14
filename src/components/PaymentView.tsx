@@ -37,6 +37,7 @@ interface PaymentViewProps {
   initialCourseDuration?: string;
   initialGuardianName?: string;
   initialGuardianRelation?: string;
+  initialAdmissionFee?: number;
   onGoBack: () => void;
   onProceedToReceipt: (receiptNo: string, enrollmentId: string) => void;
 }
@@ -64,6 +65,7 @@ export default function PaymentView({
   initialCourseDuration,
   initialGuardianName,
   initialGuardianRelation,
+  initialAdmissionFee,
   onGoBack,
   onProceedToReceipt
 }: PaymentViewProps) {
@@ -79,6 +81,7 @@ export default function PaymentView({
 
   const [dbCourseDuration, setDbCourseDuration] = useState("");
   const [dbTotalFees, setDbTotalFees] = useState<number | null>(null);
+  const [dbAdmissionFee, setDbAdmissionFee] = useState<number | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
@@ -93,6 +96,7 @@ export default function PaymentView({
     : 1;
 
   const totalFees = dbTotalFees || initialTotalFees || config.fees;
+  const admissionFee = dbAdmissionFee !== null ? dbAdmissionFee : (initialAdmissionFee || config.admission_fee);
 
   const [paymentType, setPaymentType] = useState<"full" | "partial" | "emi" | "">("");
   const [emiDownPayment, setEmiDownPayment] = useState(0);
@@ -133,6 +137,8 @@ export default function PaymentView({
           setBranch(firstDoc.branch || userProfile?.branch || "MAIN");
           setStudentEmail(firstDoc.email || "");
           setPhotoUrl(firstDoc.photoUrl || "");
+          if (firstDoc.admissionFee) setDbAdmissionFee(firstDoc.admissionFee);
+          if (firstDoc.examFee) setCourseExamFee(firstDoc.examFee);
           const hist = await getInstallmentPaymentsForStudent(id);
           if (hist) setPaymentMethod(hist.paymentMethod || "Cash");
         }
@@ -169,6 +175,8 @@ export default function PaymentView({
         setAdmissionEmailSent(false);
         if (res.courseDuration) setDbCourseDuration(res.courseDuration);
         if (res.totalCourseFees) setDbTotalFees(res.totalCourseFees);
+        if (res.admissionFee) setDbAdmissionFee(res.admissionFee);
+        if (res.examFee) setCourseExamFee(res.examFee);
         if (res.guardianName) setGuardianName(res.guardianName);
         if (res.guardianRelation) setGuardianRelation(res.guardianRelation);
         await checkExistingSchedule(searchId.trim());
@@ -341,7 +349,7 @@ export default function PaymentView({
             studentName: studentName,
             courseName: courseFullName,
             courseDuration: duration,
-            amountPaid: config.admission_fee,
+            amountPaid: admissionFee,
             paymentMode: paymentMethod || "Cash",
             receivedBy: userProfile?.username || "Admin",
             branch: branch.toUpperCase()
@@ -394,7 +402,7 @@ export default function PaymentView({
             courseName,
             courseDuration: duration,
             totalFees,
-            admissionFee: config.admission_fee ?? 5000,
+            admissionFee: admissionFee,
             paymentMode: paymentMethod || "Cash",
             guardianName,
             guardianRelation,
@@ -404,6 +412,8 @@ export default function PaymentView({
             photoUrl,
             email: modalEmail,
             schedule: activeSchedule || [],
+            paymentType,
+            examFee: courseExamFee,
             totalPayable: paymentType === "full" ? fullTotalPayable : emiTotalPayable,
           }
         })
@@ -809,7 +819,7 @@ export default function PaymentView({
                   schedule: activeSchedule,
                   receiptNo,
                   branch,
-                  admissionFee: config.admission_fee ?? 5000,
+                  admissionFee: admissionFee,
                   examFee: courseExamFee,
                   guardianName,
                   guardianRelation,
@@ -1044,7 +1054,8 @@ export default function PaymentView({
                         schedule: activeSchedule,
                         receiptNo,
                         branch,
-                        admissionFee: config.admission_fee ?? 5000,
+                        admissionFee: admissionFee,
+                        examFee: courseExamFee,
                         guardianName,
                         guardianRelation,
                         photoUrl,

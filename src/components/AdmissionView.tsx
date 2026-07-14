@@ -35,7 +35,8 @@ interface AdmissionViewProps {
     receiptNo: string,
     courseDuration?: string,
     guardianName?: string,
-    guardianRelation?: string
+    guardianRelation?: string,
+    admissionFee?: number
   ) => void;
 }
 
@@ -327,6 +328,7 @@ export default function AdmissionView({
       courseDuration: config.duration,
       totalCourseFees: calculatedTotalFees,
       admissionFee: config.admission_fee,
+      examFee: config.exam_fee || 0,
       paymentMode,
       guardianRelation,
       guardianName,
@@ -395,7 +397,8 @@ export default function AdmissionView({
         receiptNumber,
         config.duration,
         guardianName,
-        guardianRelation
+        guardianRelation,
+        config.admission_fee
       );
     } else {
       setErrorMsg(res.message);
