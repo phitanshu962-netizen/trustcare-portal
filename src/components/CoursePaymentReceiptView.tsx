@@ -17,6 +17,7 @@ interface ReceiptData {
   guardianRelation?: string;
   photoUrl?: string;
   receivedBy?: string;
+  examFee?: number;
 }
 
 const mrPoints = [
@@ -76,7 +77,7 @@ export function openInstallmentReceipt(params: {
   isAdmission?: boolean;
 }) {
   const logoBase64 = "/TrustCareLogo.png";
-  const courseLabel = params.courseName.toUpperCase();
+  const courseLabel = params.courseName.replace(/_/g, " ").toUpperCase();
   const receivedByLabel = params.receivedBy.split(/[_.]/).map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(" ");
 
   const receiptHTML = `<!DOCTYPE html>
@@ -559,7 +560,7 @@ export function openInstallmentReceipt(params: {
 
 export function openCoursePaymentReceipt(data: ReceiptData) {
   const logoBase64 = "/TrustCareLogo.png";
-  const courseLabel = data.courseName.toUpperCase();
+  const courseLabel = data.courseName.replace(/_/g, " ").toUpperCase();
   const receivedByLabel = (data.receivedBy || "Admin").split(/[_.]/).map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(" ");
 
   const paidInstallments = data.schedule.filter((inst) => inst.status === "Paid");
@@ -887,7 +888,7 @@ export function openCoursePaymentReceipt(data: ReceiptData) {
       <!-- Exam Fees -->
       <div class="field-row">
         <span style="white-space:nowrap;">Exam Fees</span>
-        <span class="field-line">&nbsp;As Applicable</span>
+        <span class="field-line">&nbsp;${data.examFee != null && data.examFee > 0 ? '₹' + data.examFee.toLocaleString('en-IN') : "As Applicable"}</span>
       </div>
 
       <!-- Monthly Fee Schedule -->
