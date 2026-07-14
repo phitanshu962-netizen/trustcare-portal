@@ -387,10 +387,10 @@ async function generatePdfAdmissionFormBuffer(data: any): Promise<Buffer> {
     console.error("Error embedding Geist font for Rupee symbol:", err);
   }
 
-  // Load Noto Sans Devanagari font for Marathi text
+  // Load Tiro Devanagari Marathi font for Marathi text
   let devanagariFont: any = null;
   try {
-    const fontPath = path.join(process.cwd(), 'public', 'fonts', 'NotoSansDevanagari-Regular.ttf');
+    const fontPath = path.join(process.cwd(), 'public', 'fonts', 'TiroDevanagariMarathi-Regular.ttf');
     if (fs.existsSync(fontPath)) {
       const fontBytes = fs.readFileSync(fontPath);
       devanagariFont = await pdfDoc.embedFont(fontBytes);
@@ -452,7 +452,7 @@ async function generatePdfAdmissionFormBuffer(data: any): Promise<Buffer> {
     }
   };
 
-  const drawMixedText = (targetPage: any, text: string, x: number, y: number, fontSize: number, options: any = {}) => {
+  const drawMixedText = async (targetPage: any, text: string, x: number, y: number, fontSize: number, options: any = {}) => {
     const regex = /([\u0900-\u097F]+)/g;
     const parts = text.split(regex);
     let currentX = x;
@@ -460,8 +460,8 @@ async function generatePdfAdmissionFormBuffer(data: any): Promise<Buffer> {
     
     for (const part of parts) {
       if (!part) continue;
-      const isDevanagari = /[\u0900-\u097F]/.test(part);
-      const selectedFont = isDevanagari ? (devanagariFont || boldFont) : boldFont;
+      const isDev = /[\u0900-\u097F]/.test(part);
+      const selectedFont = isDev ? (devanagariFont || boldFont) : boldFont;
       const cleanPart = part.replace(/—/g, '-');
       
       try {
@@ -511,11 +511,12 @@ async function generatePdfAdmissionFormBuffer(data: any): Promise<Buffer> {
       if (fs.existsSync(logoPath)) {
         const logoBytes = fs.readFileSync(logoPath);
         const logoImage = await pdfDoc.embedPng(logoBytes);
+        const logoDims = logoImage.scaleToFit(94.5, 94.5);
         targetPage.drawImage(logoImage, {
-          x: 45,
-          y: 720,
-          width: 85,
-          height: 85,
+          x: 35,
+          y: 710 + (94.5 - logoDims.height) / 2, // vertically center
+          width: logoDims.width,
+          height: logoDims.height,
         });
 
         // Watermark (Opacity 0.08, centered, 400x400)
@@ -533,24 +534,24 @@ async function generatePdfAdmissionFormBuffer(data: any): Promise<Buffer> {
 
     // Title text
     targetPage.drawText("TRUSTCARE INSTITUTE OF HEALTH SCIENCE", {
-      x: 140,
+      x: 135,
       y: 765,
-      size: 15.5,
+      size: 15.3,
       font: boldFont,
       color: darkGreen,
     });
 
     // Contact line with red circles
-    targetPage.drawText("Email: trustcareinstitute03@gmail.com", { x: 140, y: 745, size: 9, font: boldFont, color: blackColor });
-    targetPage.drawText("|", { x: 300, y: 745, size: 9, font: boldFont, color: grayColor });
+    targetPage.drawText("Email: trustcareinstitute03@gmail.com", { x: 135, y: 745, size: 9, font: boldFont, color: blackColor });
+    targetPage.drawText("|", { x: 295, y: 745, size: 9, font: boldFont, color: grayColor });
     
-    targetPage.drawCircle({ x: 315, y: 748, size: 6, color: rgb(0.82, 0.18, 0.18) });
-    targetPage.drawText("+91 9967340243", { x: 325, y: 745, size: 9, font: boldFont, color: blackColor });
+    targetPage.drawCircle({ x: 310, y: 748, size: 6, color: rgb(0.82, 0.18, 0.18) });
+    targetPage.drawText("+91 9967340243", { x: 320, y: 745, size: 9, font: boldFont, color: blackColor });
 
-    targetPage.drawText("|", { x: 395, y: 745, size: 9, font: boldFont, color: grayColor });
+    targetPage.drawText("|", { x: 390, y: 745, size: 9, font: boldFont, color: grayColor });
     
-    targetPage.drawCircle({ x: 410, y: 748, size: 6, color: rgb(0.82, 0.18, 0.18) });
-    targetPage.drawText("+91 9967288158", { x: 420, y: 745, size: 9, font: boldFont, color: blackColor });
+    targetPage.drawCircle({ x: 405, y: 748, size: 6, color: rgb(0.82, 0.18, 0.18) });
+    targetPage.drawText("+91 9967288158", { x: 415, y: 745, size: 9, font: boldFont, color: blackColor });
 
     // Address banner with top/bottom double lines
     targetPage.drawLine({ start: { x: 45, y: 706 }, end: { x: 550, y: 706 }, thickness: 1.5, color: blackColor });
@@ -567,7 +568,7 @@ async function generatePdfAdmissionFormBuffer(data: any): Promise<Buffer> {
     targetPage.drawLine({ start: { x: 45, y: 688 }, end: { x: 550, y: 688 }, thickness: 1.5, color: blackColor });
   };
 
-  const drawBottomSection = (targetPage: any) => {
+  const drawBottomSection = async (targetPage: any) => {
     // Dashed line
     targetPage.drawLine({
       start: { x: 45, y: 140 },
@@ -589,7 +590,7 @@ async function generatePdfAdmissionFormBuffer(data: any): Promise<Buffer> {
 
     // Marathi declaration
     const marDecl = `मी श्री/ श्रीमती ${guardianName}, ${guardianRelation} आई/वडील/पती/बहीण/भाऊ — मला सर्व अटी मंजूर आहेत.`;
-    drawMixedText(targetPage, marDecl, 45, 107, 8.5, {
+    await drawMixedText(targetPage, marDecl, 45, 107, 8.5, {
       color: blackColor
     });
 
@@ -890,7 +891,7 @@ async function generatePdfAdmissionFormBuffer(data: any): Promise<Buffer> {
   page.drawLine({ start: { x: 350, y: totalPayableY - 4 }, end: { x: 550, y: totalPayableY - 4 }, thickness: 1.5, color: blackColor });
 
   // Draw Bottom Section on Page 1
-  drawBottomSection(page);
+  await drawBottomSection(page);
 
 
   // Build Page 2: Undertaking / हमी पत्र
@@ -904,7 +905,7 @@ async function generatePdfAdmissionFormBuffer(data: any): Promise<Buffer> {
   const path2 = `M ${bannerX2 + 11} ${bannerY2} L ${bannerX2 + bannerWidth2} ${bannerY2} L ${bannerX2 + bannerWidth2 - 11} ${bannerY2 + bannerHeight2} L ${bannerX2} ${bannerY2 + bannerHeight2} Z`;
   page2.drawSvgPath(path2, { color: tealBlueColor });
   
-  drawMixedText(page2, "हमी पत्र / UNDER TAKING", (595 - 195) / 2, 658, 13, { color: rgb(1, 1, 1) });
+  await drawMixedText(page2, "हमी पत्र / UNDER TAKING", (595 - 200) / 2, 658, 13.5, { color: rgb(1, 1, 1), font: boldFont });
 
   let page2Y = 645;
 
@@ -940,7 +941,7 @@ async function generatePdfAdmissionFormBuffer(data: any): Promise<Buffer> {
         });
       }
       // Draw text
-      drawMixedText(page2, wrappedLines[j], 63, page2Y, 8, { color: blackColor });
+      await drawMixedText(page2, wrappedLines[j], 63, page2Y, 8.25, { color: blackColor, italic: true });
     }
     page2Y -= 2;
   }
@@ -1001,7 +1002,7 @@ async function generatePdfAdmissionFormBuffer(data: any): Promise<Buffer> {
   }
 
   // Draw Bottom Section on Page 2
-  drawBottomSection(page2);
+  await drawBottomSection(page2);
 
   const bytes = await pdfDoc.save();
   return Buffer.from(bytes);
