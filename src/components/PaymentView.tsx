@@ -94,8 +94,6 @@ export default function PaymentView({
   const totalFees = dbTotalFees || initialTotalFees || config.fees;
 
   const [paymentType, setPaymentType] = useState<"full" | "partial" | "emi" | "">("");
-  const [partialInitial, setPartialInitial] = useState(0);
-  const [partialTenure, setPartialTenure] = useState(6);
   const [emiDownPayment, setEmiDownPayment] = useState(0);
   const [emiTenure, setEmiTenure] = useState(6);
   const [locked, setLocked] = useState(false);
@@ -186,10 +184,6 @@ export default function PaymentView({
   };
 
   const fullTotalPayable = totalFees;
-  const partialRemaining = Math.max(0, totalFees - partialInitial);
-  const partialEMIAmount = partialRemaining > 0 ? Math.floor(partialRemaining / partialTenure) : 0;
-  const partialRemainder = partialRemaining > 0 ? partialRemaining % partialTenure : 0;
-  const partialTotalPayable = partialInitial + partialRemaining;
 
   // Calculations for EMI Payment
   const emiRemaining = Math.max(0, totalFees - emiDownPayment);
@@ -213,36 +207,6 @@ export default function PaymentView({
         status: "Pending",
         type: "Full Payment (with discount)"
       });
-    } else if (paymentType === "partial") {
-      let counter = 1;
-      if (partialInitial > 0) {
-        scheduleArray.push({
-          installmentNumber: counter++,
-          amount: partialInitial,
-          dueDate: todayStr,
-          status: "Pending",
-          type: "Installment 1"
-        });
-      }
-      for (let i = 1; i <= partialTenure; i++) {
-        const nextMonth = new Date(today.getFullYear(), today.getMonth() + i, 1);
-        const maxDays = new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 0).getDate();
-        nextMonth.setDate(Math.min(today.getDate(), maxDays));
-        let amount = 0;
-        if (i === partialTenure) {
-          const totalSoFar = partialInitial + (partialEMIAmount * (partialTenure - 1)) + partialRemainder;
-          amount = totalFees - totalSoFar;
-        } else {
-          amount = partialEMIAmount + (i <= partialRemainder ? 1 : 0);
-        }
-        scheduleArray.push({
-          installmentNumber: counter++,
-          amount,
-          dueDate: nextMonth.toISOString().split("T")[0],
-          status: "Pending",
-          type: `Installment ${counter - 1}`
-        });
-      }
     } else if (paymentType === "emi") {
       let counter = 1;
       if (emiDownPayment > 0) {
@@ -271,7 +235,7 @@ export default function PaymentView({
       }
     }
     return scheduleArray;
-  }, [paymentType, fullTotalPayable, partialInitial, partialTenure, partialEMIAmount, partialRemainder, totalFees, emiDownPayment, emiTenure, emiEMIAmount]);
+  }, [paymentType, fullTotalPayable, totalFees, emiDownPayment, emiTenure, emiEMIAmount]);
 
   const activeSchedule = locked ? schedule : calculatedSchedule;
 
@@ -279,7 +243,7 @@ export default function PaymentView({
   const handleConfirmPlan = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!paymentType) { alert("Please select a payment card options first."); e.target.checked = false; return; }
     if (!paymentMethod) { alert("Please select a payment method first."); e.target.checked = false; return; }
-    const planLabel = paymentType === "full" ? "Full Payment" : paymentType === "partial" ? "Partial Payment" : "EMI Plan";
+    const planLabel = paymentType === "full" ? "Full Payment" : "EMI Plan";
     if (!window.confirm(`Are you sure you want to proceed with ${planLabel}?\n\nThis will lock your payment selection and generate the installment schedule.`)) {
       e.target.checked = false; return;
     }
@@ -289,7 +253,7 @@ export default function PaymentView({
     setConfirmed(true);
     setSchedule(calculatedSchedule);
 
-    const activePayFees = paymentType === "full" ? fullTotalPayable : paymentType === "partial" ? partialTotalPayable : emiTotalPayable;
+    const activePayFees = paymentType === "full" ? fullTotalPayable : emiTotalPayable;
     try {
       // 1. Save Fee Structure
       await saveCoursePayment({
@@ -380,10 +344,10 @@ export default function PaymentView({
 
       const res = await response.json();
       if (response.ok) {
-        setSuccessMsg(`Admission receipt email sent to ${studentEmail} successfully!`);
+        setSuccessMsg(`Admission confirmation email sent to ${studentEmail} successfully!`);
         setAdmissionEmailSent(true);
       } else {
-        setErrorMsg(res.error || "Failed to send admission email.");
+        setErrorMsg(res.error || "Failed to send admission confirmation email.");
       }
     } catch (err: any) {
       setErrorMsg("Error sending email: " + err.message);
@@ -553,30 +517,6 @@ export default function PaymentView({
             readOnly
           />
         </div>
-        {studentName && (
-          <div className="md:col-span-4 border-t border-slate-900/60 pt-4 mt-2 grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-            <div className="md:col-span-2 space-y-1.5">
-              <label className="block text-xs font-semibold text-slate-400">Student Email Address</label>
-              <input
-                type="email"
-                value={studentEmail}
-                onChange={(e) => setStudentEmail(e.target.value)}
-                className="w-full bg-slate-950/80 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-700 focus:outline-none focus:border-teal-500/50 font-medium"
-                placeholder="student@example.com (No email on record)"
-              />
-            </div>
-            <div className="md:col-span-2 flex gap-2 w-full">
-              <button
-                type="button"
-                onClick={handleSendAdmissionEmail}
-                disabled={loading || !studentEmail}
-                className="px-4 py-2 bg-gradient-to-r from-teal-500/10 to-indigo-500/10 border border-teal-500/25 text-teal-400 hover:opacity-90 active:scale-95 transition-all text-xs rounded-xl cursor-pointer hover-lift flex-1 flex items-center justify-center gap-1.5 uppercase font-bold tracking-wider disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                ✉ {admissionEmailSent ? "Resend Admission Email" : "Email Admission Receipt"}
-              </button>
-            </div>
-          </div>
-        )}
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div className="bg-slate-900/20 border border-slate-900 p-4 rounded-2xl flex flex-col justify-center">
@@ -597,7 +537,7 @@ export default function PaymentView({
       {/* Payment Options - simplified but keep same structure */}
       <div className="space-y-4">
         <h3 className="text-xs font-bold text-slate-450 uppercase tracking-widest">Select Payment Plan</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {(!locked || paymentType === "full") && (
             <div onClick={() => !locked && setPaymentType("full")}
               className={`p-5 rounded-2xl border-2 cursor-pointer transition-all duration-300 ${paymentType === "full" ? "bg-teal-500/5 border-teal-500/40 shadow-lg shadow-teal-500/5" : "bg-slate-950/30 border-slate-900 hover:border-slate-800"}`}>
@@ -617,44 +557,6 @@ export default function PaymentView({
               <div className="mt-4 pt-3 border-t border-slate-900 space-y-2 text-xs">
                 <div className="flex justify-between text-slate-400"><span>Standard Fees:</span><span>₹{totalFees.toLocaleString()}</span></div>
                 <div className="flex justify-between font-bold text-slate-200 border-t border-slate-900 pt-2 mt-1"><span>Total Payable:</span><span className="text-teal-400">₹{fullTotalPayable.toLocaleString()}</span></div>
-              </div>
-            </div>
-          )}
-          {(!locked || paymentType === "partial") && (
-            <div onClick={() => !locked && setPaymentType("partial")}
-              className={`p-5 rounded-2xl border-2 cursor-pointer transition-all duration-300 ${paymentType === "partial" ? "bg-teal-500/5 border-teal-500/40 shadow-lg shadow-teal-500/5" : "bg-slate-950/30 border-slate-900 hover:border-slate-800"}`}>
-              <div className="flex items-center gap-2.5 mb-2">
-                <input
-                  type="radio"
-                  id="partial"
-                  name="plan"
-                  checked={paymentType === "partial"}
-                  onChange={() => !locked && setPaymentType("partial")}
-                  disabled={locked}
-                  className="h-4.5 w-4.5 text-teal-500 border-slate-800 bg-slate-950 focus:ring-teal-500/20 focus:ring-offset-slate-950 cursor-pointer"
-                />
-                <label htmlFor="partial" className="font-bold text-sm text-slate-200 cursor-pointer">Partial Payment</label>
-              </div>
-              <p className="text-xs text-slate-500">Pay initial and the rest in installments</p>
-              <div className="mt-4 pt-3 border-t border-slate-900 space-y-2 text-xs">
-                <div className="flex justify-between items-center text-slate-400"><span>Initial Pay (₹):</span>
-                  <input type="number" value={partialInitial || ""} onChange={(e) => setPartialInitial(Math.min(totalFees, Math.max(0, parseInt(e.target.value) || 0)))} disabled={locked} className="w-20 bg-slate-950 border border-slate-850 rounded-lg px-2 py-1 text-right text-slate-200 text-xs font-semibold focus:outline-none focus:border-teal-500/40" placeholder="0" />
-                </div>
-                <div className="flex justify-between items-center text-slate-400">
-                  <span>Installments:</span>
-                  <select
-                    value={partialTenure}
-                    onChange={(e) => setPartialTenure(parseInt(e.target.value))}
-                    disabled={locked}
-                    className="bg-slate-950 border border-slate-850 rounded-lg px-2 py-1 text-slate-200 text-xs font-semibold focus:outline-none cursor-pointer"
-                  >
-                    {[3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(n => (
-                      <option key={n} value={n}>{n}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="flex justify-between text-slate-400"><span>EMI Amount:</span><span>₹{partialEMIAmount.toLocaleString()}</span></div>
-                <div className="flex justify-between font-bold text-slate-200 border-t border-slate-900 pt-2 mt-1"><span>Total Payable:</span><span className="text-teal-400">₹{partialTotalPayable.toLocaleString()}</span></div>
               </div>
             </div>
           )}
@@ -831,7 +733,7 @@ export default function PaymentView({
                 courseName,
                 courseDuration: duration,
                 totalFees,
-                totalPayable: paymentType === "full" ? fullTotalPayable : paymentType === "partial" ? partialTotalPayable : emiTotalPayable,
+                totalPayable: paymentType === "full" ? fullTotalPayable : emiTotalPayable,
                 paymentType,
                 paymentMethod,
                 schedule: activeSchedule,

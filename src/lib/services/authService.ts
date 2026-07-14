@@ -113,26 +113,31 @@ export async function logoutUser(): Promise<void> {
 // Subscribe to auth state changes
 export function subscribeToAuth(callback: (user: FirebaseUser | null, profile: UserProfile | null) => void) {
   return onAuthStateChanged(auth, async (user) => {
-    if (user) {
-      const email = user.email || "";
-      const userDoc = await getDoc(doc(db, "users", user.uid));
-      if (userDoc.exists()) {
-        const profile = userDoc.data() as UserProfile;
-        if (ADMIN_EMAILS.includes(email) && profile.role !== "admin") {
-          profile.role = "admin";
-          setDoc(doc(db, "users", user.uid), { role: "admin" }, { merge: true });
+    try {
+      if (user) {
+        const email = user.email || "";
+        const userDoc = await getDoc(doc(db, "users", user.uid));
+        if (userDoc.exists()) {
+          const profile = userDoc.data() as UserProfile;
+          if (ADMIN_EMAILS.includes(email) && profile.role !== "admin") {
+            profile.role = "admin";
+            await setDoc(doc(db, "users", user.uid), { role: "admin" }, { merge: true });
+          }
+          callback(user, profile);
+        } else {
+          callback(user, {
+            uid: user.uid,
+            email,
+            username: email.split("@")[0],
+            role: ADMIN_EMAILS.includes(email) ? "admin" : "staff",
+            branch: "main"
+          });
         }
-        callback(user, profile);
       } else {
-        callback(user, {
-          uid: user.uid,
-          email,
-          username: email.split("@")[0],
-          role: ADMIN_EMAILS.includes(email) ? "admin" : "staff",
-          branch: "main"
-        });
+        callback(null, null);
       }
-    } else {
+    } catch (error) {
+      console.error("Error in subscribeToAuth callback:", error);
       callback(null, null);
     }
   });

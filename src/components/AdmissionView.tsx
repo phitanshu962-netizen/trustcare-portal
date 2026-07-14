@@ -342,7 +342,7 @@ export default function AdmissionView({
 
     if (res.success) {
       // Send email to student if email exists and user confirms
-      if (email && window.confirm("Do you want to send the admission receipt to the student's email?")) {
+      if (email && window.confirm("Do you want to send the admission confirmation email to the student?")) {
         try {
           await fetch("/api/send-email", {
             method: "POST",
