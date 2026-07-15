@@ -1,56 +1,47 @@
 {
   "indexes": [
     {
-      "collectionGroup": "widgets",
+      "collectionGroup": "inquiries",
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "foo",
-          "arrayConfig": "CONTAINS"
+          "fieldPath": "branch",
+          "order": "ASCENDING"
         },
         {
-          "fieldPath": "bar",
-          "mode": "DESCENDING"
+          "fieldPath": "timestamp",
+          "order": "DESCENDING"
         }
       ]
     },
     {
-      "collectionGroup": "reviews",
-      "queryScope": "COLLECTION_GROUP",
-      "apiScope": "MONGODB_COMPATIBLE_API",
-      "density": "DENSE",
-      "multikey": false,
+      "collectionGroup": "admissions",
+      "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "baz",
-          "mode": "ASCENDING"
+          "fieldPath": "branch",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "timestamp",
+          "order": "DESCENDING"
         }
       ]
     },
     {
-      "collectionGroup": "items",
-      "queryScope": "COLLECTION_GROUP",
-      "apiScope": "MONGODB_COMPATIBLE_API",
-      "density": "SPARSE_ANY",
-      "multikey": true,
+      "collectionGroup": "feeStructures",
+      "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "baz",
-          "mode": "ASCENDING"
+          "fieldPath": "branch",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "timestamp",
+          "order": "DESCENDING"
         }
       ]
     }
   ],
-  "fieldOverrides": [
-    {
-      "collectionGroup": "widgets",
-      "fieldPath": "baz",
-      "indexes": [
-        {
-          "order": "ASCENDING",
-          "queryScope": "COLLECTION"
-        }
-      ]
-    }
-  ]
+  "fieldOverrides": []
 }

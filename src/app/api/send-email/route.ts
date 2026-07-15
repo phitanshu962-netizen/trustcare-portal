@@ -547,46 +547,75 @@ export async function generatePdfAdmissionFormBuffer(data: any): Promise<Buffer>
           canvasFontRegistered = true;
         }
 
-        const tempCanvas = createCanvas(10, 10);
-        const tempCtx = tempCanvas.getContext('2d');
+        const measureCanvas = createCanvas(10, 10);
+        const measureCtx = measureCanvas.getContext('2d');
         const isBold = options.font === boldFont;
-        // Use italic font for Marathi points if requested
         const isItalic = options.italic ? 'italic ' : '';
-        tempCtx.font = `${isItalic}${isBold ? 'bold ' : ''}${fontSize}px "Noto Sans Devanagari", "Arial", sans-serif`;
+        measureCtx.font = `${isItalic}${isBold ? 'bold ' : ''}${fontSize}px "Noto Sans Devanagari", "Arial", sans-serif`;
 
-        const textWidth = Math.ceil(tempCtx.measureText(text).width);
-        const textHeight = Math.ceil(fontSize * 1.5);
-
-        if (textWidth > 0) {
-          const scale = 4;
-          const canvas = createCanvas(textWidth * scale, textHeight * scale);
-          const ctx = canvas.getContext('2d');
-          ctx.scale(scale, scale);
-          ctx.font = tempCtx.font;
-
-          const r = Math.round(color.red * 255);
-          const g = Math.round(color.green * 255);
-          const b = Math.round(color.blue * 255);
-          ctx.fillStyle = `rgb(${r},${g},${b})`;
-          ctx.textBaseline = 'top';
-          ctx.fillText(text, 0, 0);
-
-          const buffer = canvas.toBuffer('image/png');
-          const img = await pdfDoc.embedPng(buffer);
-
-          let drawX = x;
-          if (options.align === 'center') {
-            drawX = ((options.pageWidth || 595) - textWidth) / 2;
+        // Split text by English/alphanumeric parts to draw English directly and Devanagari with Canvas
+        const parts = text.split(/([a-zA-Z0-9%]+)/g);
+        const partWidths = parts.map(part => {
+          if (!part) return 0;
+          if (/[a-zA-Z0-9%]/.test(part)) {
+            const selectedFont = options.font || boldFont;
+            return selectedFont.widthOfTextAtSize(part, fontSize);
+          } else {
+            return measureCtx.measureText(part).width;
           }
+        });
+        const totalWidth = partWidths.reduce((a, b) => a + b, 0);
 
-          targetPage.drawImage(img, {
-            x: drawX,
-            y: y - fontSize * 0.25,
-            width: textWidth,
-            height: textHeight
-          });
-          return textWidth;
+        let drawX = x;
+        if (options.align === 'center') {
+          drawX = ((options.pageWidth || 595) - totalWidth) / 2;
         }
+        const startX = drawX;
+
+        for (let i = 0; i < parts.length; i++) {
+          const part = parts[i];
+          if (!part) continue;
+          const partWidth = partWidths[i];
+
+          if (/[a-zA-Z0-9%]/.test(part)) {
+            // Draw English text directly to avoid tofu boxes
+            const selectedFont = options.font || boldFont;
+            targetPage.drawText(part, {
+              x: drawX,
+              y,
+              size: fontSize,
+              font: selectedFont,
+              color,
+            });
+          } else if (partWidth > 0) {
+            // Draw Devanagari via Canvas for correct layout shaping
+            const textHeight = Math.ceil(fontSize * 1.5);
+            const scale = 4;
+            const canvas = createCanvas(partWidth * scale, textHeight * scale);
+            const ctx = canvas.getContext('2d');
+            ctx.scale(scale, scale);
+            ctx.font = measureCtx.font;
+
+            const r = Math.round(color.red * 255);
+            const g = Math.round(color.green * 255);
+            const b = Math.round(color.blue * 255);
+            ctx.fillStyle = `rgb(${r},${g},${b})`;
+            ctx.textBaseline = 'top';
+            ctx.fillText(part, 0, 0);
+
+            const buffer = canvas.toBuffer('image/png');
+            const img = await pdfDoc.embedPng(buffer);
+
+            targetPage.drawImage(img, {
+              x: drawX,
+              y: y - fontSize * 0.25,
+              width: partWidth,
+              height: textHeight
+            });
+          }
+          drawX += partWidth;
+        }
+        return drawX - startX;
       } catch (err) {
         console.error("Canvas rendering failed for Marathi text, falling back to pdf-lib:", err);
       }
@@ -678,37 +707,23 @@ export async function generatePdfAdmissionFormBuffer(data: any): Promise<Buffer>
       console.error("Error drawing logo template:", err);
     }
 
-    // Title text
+    // Title text (adjusted to size 14 and x: 135 to clear the photo at x: 485)
     targetPage.drawText("TRUSTCARE INSTITUTE OF HEALTH SCIENCE", {
-      x: 140,
+      x: 135,
       y: 765,
-      size: 15.3,
+      size: 14,
       font: boldFont,
       color: darkGreen,
     });
 
-    // Contact line with red circles
-    targetPage.drawText("Email: trustcareinstitute03@gmail.com", { x: 140, y: 745, size: 9, font: boldFont, color: blackColor });
-    targetPage.drawText("|", { x: 300, y: 745, size: 9, font: boldFont, color: grayColor });
-
-    targetPage.drawCircle({ x: 315, y: 748, size: 6.75, color: rgb(0.82, 0.18, 0.18) });
-    // Phone icon character inside the circle for matching browser
-    try {
-      targetPage.drawText("☎", { x: 311.5, y: 744.5, size: 8, font: devanagariFont || font, color: rgb(1, 1, 1) });
-    } catch (e) {
-      console.warn("Skipping rendering of phone icon character:", e);
-    }
-    targetPage.drawText("+91 9967340243", { x: 325, y: 745, size: 9, font: boldFont, color: blackColor });
-
-    targetPage.drawText("|", { x: 405, y: 745, size: 9, font: boldFont, color: grayColor });
-
-    targetPage.drawCircle({ x: 420, y: 748, size: 6.75, color: rgb(0.82, 0.18, 0.18) });
-    try {
-      targetPage.drawText("☎", { x: 416.5, y: 744.5, size: 8, font: devanagariFont || font, color: rgb(1, 1, 1) });
-    } catch (e) {
-      console.warn("Skipping rendering of phone icon character:", e);
-    }
-    targetPage.drawText("+91 9967288158", { x: 430, y: 745, size: 9, font: boldFont, color: blackColor });
+    // Contact line (increased size to 9.5, telephone icon temporarily removed)
+    targetPage.drawText("Email: trustcareinstitute03@gmail.com | +91 9967340243 | +91 9967288158", {
+      x: 135,
+      y: 745,
+      size: 9.5,
+      font: boldFont,
+      color: blackColor,
+    });
 
     // Address banner with top/bottom double lines
     targetPage.drawLine({ start: { x: 35, y: 706 }, end: { x: 560, y: 706 }, thickness: 1.5, color: blackColor });
@@ -827,60 +842,119 @@ export async function generatePdfAdmissionFormBuffer(data: any): Promise<Buffer>
     });
   }
 
-  // Receipt No & Date
+  // Receipt No & Date (Date moved to the right, underlines 50% extended)
   page.drawText("Receipt No.", { x: 35, y: 625, size: 10.5, font: boldFont });
   page.drawText(receiptNo, { x: 100, y: 625, size: 10.5, font: boldFont });
-  page.drawLine({ start: { x: 98, y: 623 }, end: { x: 250, y: 623 }, thickness: 1, color: blackColor });
+  const receiptNoWidth = boldFont.widthOfTextAtSize(receiptNo, 10.5);
+  const receiptNoUnderlineLength = receiptNoWidth * 1.5;
+  page.drawLine({ start: { x: 98, y: 623 }, end: { x: 100 + receiptNoUnderlineLength, y: 623 }, thickness: 1, color: blackColor });
 
-  page.drawText("Date :", { x: 330, y: 625, size: 10.5, font: boldFont });
-  page.drawText(date, { x: 365, y: 625, size: 10.5, font: boldFont });
-  page.drawLine({ start: { x: 363, y: 623 }, end: { x: 480, y: 623 }, thickness: 1, color: blackColor });
+  page.drawText("Date :", { x: 410, y: 625, size: 10.5, font: boldFont });
+  page.drawText(date, { x: 445, y: 625, size: 10.5, font: boldFont });
+  const dateWidth = boldFont.widthOfTextAtSize(date, 10.5);
+  const dateUnderlineLength = dateWidth * 1.5;
+  page.drawLine({ start: { x: 443, y: 623 }, end: { x: 445 + dateUnderlineLength, y: 623 }, thickness: 1, color: blackColor });
 
-  // Rows of details (aligned nicely with lines)
+  // Rows of details (aligned nicely with lines, 50% extended underlines)
   page.drawText("Student Name", { x: 35, y: 600, size: 10.5, font: boldFont });
   page.drawText(studentName, { x: 115, y: 600, size: 10.5, font: boldFont });
-  page.drawLine({ start: { x: 113, y: 598 }, end: { x: 560, y: 598 }, thickness: 1, color: blackColor });
+  const studentNameWidth = boldFont.widthOfTextAtSize(studentName, 10.5);
+  const studentNameUnderlineLength = studentNameWidth * 1.5;
+  page.drawLine({ start: { x: 113, y: 598 }, end: { x: 115 + studentNameUnderlineLength, y: 598 }, thickness: 1, color: blackColor });
 
   page.drawText("Course Name", { x: 35, y: 575, size: 10.5, font: boldFont });
   page.drawText(courseName, { x: 115, y: 575, size: 10.5, font: boldFont });
-  page.drawLine({ start: { x: 113, y: 573 }, end: { x: 560, y: 573 }, thickness: 1, color: blackColor });
+  const courseNameWidth = boldFont.widthOfTextAtSize(courseName, 10.5);
+  const courseNameUnderlineLength = courseNameWidth * 1.5;
+  page.drawLine({ start: { x: 113, y: 573 }, end: { x: 115 + courseNameUnderlineLength, y: 573 }, thickness: 1, color: blackColor });
 
   // Row 3
   page.drawText("Course Duration", { x: 35, y: 550, size: 10.5, font: boldFont });
   page.drawText(courseDuration, { x: 125, y: 550, size: 10.5, font: boldFont });
-  page.drawLine({ start: { x: 123, y: 548 }, end: { x: 270, y: 548 }, thickness: 1, color: blackColor });
+  const durationWidth = boldFont.widthOfTextAtSize(courseDuration, 10.5);
+  const durationUnderlineLength = durationWidth * 1.5;
+  page.drawLine({ start: { x: 123, y: 548 }, end: { x: 125 + durationUnderlineLength, y: 548 }, thickness: 1, color: blackColor });
 
   page.drawText("Admission Fees", { x: 285, y: 550, size: 10.5, font: boldFont });
   drawRupeeSymbol(page, 380, 550, 10.5);
-  page.drawText(admissionFee.toLocaleString('en-IN'), { x: 390, y: 550, size: 10.5, font: boldFont });
-  page.drawLine({ start: { x: 378, y: 548 }, end: { x: 560, y: 548 }, thickness: 1, color: blackColor });
+  const formattedAdmissionFee = admissionFee.toLocaleString('en-IN');
+  page.drawText(formattedAdmissionFee, { x: 390, y: 550, size: 10.5, font: boldFont });
+  const admissionFeeWidth = boldFont.widthOfTextAtSize(formattedAdmissionFee, 10.5);
+  const admissionFeeUnderlineLength = admissionFeeWidth * 1.5;
+  page.drawLine({ start: { x: 378, y: 548 }, end: { x: 390 + admissionFeeUnderlineLength, y: 548 }, thickness: 1, color: blackColor });
 
-  // Row 4
-  page.drawText("Course Fees", { x: 35, y: 525, size: 10.5, font: boldFont });
-  drawRupeeSymbol(page, 110, 525, 10.5);
-  page.drawText(monthlyFee.toLocaleString('en-IN'), { x: 120, y: 525, size: 10.5, font: boldFont });
-  page.drawLine({ start: { x: 108, y: 523 }, end: { x: 205, y: 523 }, thickness: 1, color: blackColor });
+  // Row 4 (Dynamic spacing as per text, underlines extended 1.5x)
+  let currentX = 35;
+  page.drawText("Course Fees", { x: currentX, y: 525, size: 10.5, font: boldFont });
+  let courseFeesLabelWidth = boldFont.widthOfTextAtSize("Course Fees", 10.5);
+  currentX += courseFeesLabelWidth + 10;
 
-  page.drawText("×", { x: 215, y: 525, size: 10.5, font: boldFont });
-  page.drawText(`${totalMonths} Month${totalMonths > 1 ? 's' : ''}`, { x: 235, y: 525, size: 10.5, font: boldFont });
-  page.drawLine({ start: { x: 230, y: 523 }, end: { x: 290, y: 523 }, thickness: 1, color: blackColor });
+  // Monthly fee group
+  let monthlyFeeUnderlineStart = currentX - 2;
+  drawRupeeSymbol(page, currentX, 525, 10.5);
+  const rupeeWidth = rupeeFont ? rupeeFont.widthOfTextAtSize('₹', 10.5) : font.widthOfTextAtSize('Rs.', 10.5);
+  currentX += rupeeWidth + 2;
+  const formattedMonthlyFee = monthlyFee.toLocaleString('en-IN');
+  page.drawText(formattedMonthlyFee, { x: currentX, y: 525, size: 10.5, font: boldFont });
+  const monthlyFeeWidth = boldFont.widthOfTextAtSize(formattedMonthlyFee, 10.5);
+  const monthlyFeeUnderlineLength = monthlyFeeWidth * 1.5;
+  let monthlyFeeUnderlineEnd = currentX + monthlyFeeUnderlineLength;
+  page.drawLine({ start: { x: monthlyFeeUnderlineStart, y: 523 }, end: { x: monthlyFeeUnderlineEnd, y: 523 }, thickness: 1, color: blackColor });
+  currentX = monthlyFeeUnderlineEnd + 10;
 
-  page.drawText("=", { x: 300, y: 525, size: 10.5, font: boldFont });
-  drawRupeeSymbol(page, 320, 525, 10.5);
-  page.drawText(totalFees.toLocaleString('en-IN'), { x: 330, y: 525, size: 10.5, font: boldFont });
-  page.drawLine({ start: { x: 318, y: 523 }, end: { x: 420, y: 523 }, thickness: 1, color: blackColor });
-  page.drawText("Total", { x: 430, y: 525, size: 10.5, font: boldFont });
+  // Multiply sign
+  page.drawText("×", { x: currentX, y: 525, size: 10.5, font: boldFont });
+  let timesWidth = boldFont.widthOfTextAtSize("×", 10.5);
+  currentX += timesWidth + 10;
+
+  // Months group
+  let monthsUnderlineStart = currentX - 2;
+  const monthsText = `${totalMonths} Month${totalMonths > 1 ? 's' : ''}`;
+  page.drawText(monthsText, { x: currentX, y: 525, size: 10.5, font: boldFont });
+  const monthsWidth = boldFont.widthOfTextAtSize(monthsText, 10.5);
+  const monthsUnderlineLength = monthsWidth * 1.5;
+  let monthsUnderlineEnd = currentX + monthsUnderlineLength;
+  page.drawLine({ start: { x: monthsUnderlineStart, y: 523 }, end: { x: monthsUnderlineEnd, y: 523 }, thickness: 1, color: blackColor });
+  currentX = monthsUnderlineEnd + 10;
+
+  // Equals sign
+  page.drawText("=", { x: currentX, y: 525, size: 10.5, font: boldFont });
+  let equalsWidth = boldFont.widthOfTextAtSize("=", 10.5);
+  currentX += equalsWidth + 10;
+
+  // Total fees group
+  let totalFeesUnderlineStart = currentX - 2;
+  drawRupeeSymbol(page, currentX, 525, 10.5);
+  currentX += rupeeWidth + 2;
+  const formattedTotalFees = totalFees.toLocaleString('en-IN');
+  page.drawText(formattedTotalFees, { x: currentX, y: 525, size: 10.5, font: boldFont });
+  const totalFeesWidth = boldFont.widthOfTextAtSize(formattedTotalFees, 10.5);
+  const totalFeesUnderlineLength = totalFeesWidth * 1.5;
+  let totalFeesUnderlineEnd = currentX + totalFeesUnderlineLength;
+  page.drawLine({ start: { x: totalFeesUnderlineStart, y: 523 }, end: { x: totalFeesUnderlineEnd, y: 523 }, thickness: 1, color: blackColor });
+  currentX = totalFeesUnderlineEnd + 10;
+
+  // Total label
+  page.drawText("Total", { x: currentX, y: 525, size: 10.5, font: boldFont });
 
   // Row 5: Exam Fees
   page.drawText("Exam Fees", { x: 35, y: 500, size: 10.5, font: boldFont });
   const examFee = data.examFee;
+  let examFeeWidth = 0;
+  let examFeeTextStartX = 115;
   if (examFee != null && examFee > 0) {
     drawRupeeSymbol(page, 115, 500, 10.5);
-    page.drawText(examFee.toLocaleString('en-IN'), { x: 125, y: 500, size: 10.5, font: boldFont });
+    const rupeeWidth = rupeeFont ? rupeeFont.widthOfTextAtSize('₹', 10.5) : font.widthOfTextAtSize('Rs.', 10.5);
+    examFeeTextStartX = 115 + rupeeWidth + 2;
+    const formattedExamFee = examFee.toLocaleString('en-IN');
+    page.drawText(formattedExamFee, { x: examFeeTextStartX, y: 500, size: 10.5, font: boldFont });
+    examFeeWidth = boldFont.widthOfTextAtSize(formattedExamFee, 10.5);
   } else {
     page.drawText("As Applicable", { x: 115, y: 500, size: 10.5, font: boldFont });
+    examFeeWidth = boldFont.widthOfTextAtSize("As Applicable", 10.5);
   }
-  page.drawLine({ start: { x: 113, y: 498 }, end: { x: 560, y: 498 }, thickness: 1, color: blackColor });
+  const examFeeUnderlineLength = examFeeWidth * 1.5;
+  page.drawLine({ start: { x: 113, y: 498 }, end: { x: examFeeTextStartX + examFeeUnderlineLength, y: 498 }, thickness: 1, color: blackColor });
 
   // Draw Horizontal 12-Month Calendar grid
   let tableEndY = 455;
@@ -1039,12 +1113,11 @@ export async function generatePdfAdmissionFormBuffer(data: any): Promise<Buffer>
     tableEndY = currentTblY;
   }
 
-  // Draw Total Payable
+  // Draw Total Payable (underline removed and shifted to the right)
   const totalPayableY = Math.max(160, tableEndY - 10);
-  page.drawText("Total Payable :", { x: 350, y: totalPayableY, size: 11, font: boldFont });
-  drawRupeeSymbol(page, 435, totalPayableY, 11);
-  page.drawText(totalPayable.toLocaleString('en-IN'), { x: 447, y: totalPayableY, size: 12, font: boldFont });
-  page.drawLine({ start: { x: 350, y: totalPayableY - 4 }, end: { x: 560, y: totalPayableY - 4 }, thickness: 1.5, color: blackColor });
+  page.drawText("Total Payable :", { x: 395, y: totalPayableY, size: 11, font: boldFont });
+  drawRupeeSymbol(page, 485, totalPayableY, 11);
+  page.drawText(totalPayable.toLocaleString('en-IN'), { x: 497, y: totalPayableY, size: 12, font: boldFont });
 
   // Draw Bottom Section on Page 1
   await drawBottomSection(page);
