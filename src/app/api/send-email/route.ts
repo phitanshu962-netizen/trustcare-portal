@@ -311,7 +311,45 @@ async function generatePdfReceiptBuffer(type: string, data: any): Promise<Buffer
   page.drawText("• Course Fees, Once Paid Cannot Be Refunded.", { x: 45, y: 56, size: 8, font: font, color: blackColor });
   page.drawText("• After Admission Is Completed Cancellation. Is Not Allowed.", { x: 45, y: 44, size: 8, font: font, color: blackColor });
   // 12. Signature Area (Right bottom, exact matching)
-  page.drawText("Authority Sign./Stamp  ..........................", { x: 395, y: 44, size: 9, font: boldFont, color: blackColor });
+  page.drawText("Authority Sign./Stamp", { x: 395, y: 44, size: 9, font: boldFont, color: blackColor });
+
+  try {
+    const signaturePath = path.join(process.cwd(), 'public', 'signature.png');
+    if (fs.existsSync(signaturePath)) {
+      const sigBytes = fs.readFileSync(signaturePath);
+      let sigImage;
+      try {
+        sigImage = await pdfDoc.embedPng(sigBytes);
+      } catch {
+        sigImage = await pdfDoc.embedJpg(sigBytes);
+      }
+      page.drawImage(sigImage, {
+        x: 400,
+        y: 55,
+        width: 80,
+        height: 40,
+      });
+    }
+
+    const stampPath = path.join(process.cwd(), 'public', 'stamp.png');
+    if (fs.existsSync(stampPath)) {
+      const stampBytes = fs.readFileSync(stampPath);
+      let stampImage;
+      try {
+        stampImage = await pdfDoc.embedPng(stampBytes);
+      } catch {
+        stampImage = await pdfDoc.embedJpg(stampBytes);
+      }
+      page.drawImage(stampImage, {
+        x: 490,
+        y: 20,
+        width: 60,
+        height: 60,
+      });
+    }
+  } catch (err) {
+    console.error("Error embedding signature or stamp in PDF:", err);
+  }
 
   const bytes = await pdfDoc.save();
   return Buffer.from(bytes);
@@ -761,8 +799,46 @@ export async function generatePdfAdmissionFormBuffer(data: any): Promise<Buffer>
     targetPage.drawLine({ start: { x: 220, y: 55 }, end: { x: 350, y: 55 }, thickness: 1.1, color: blackColor });
     targetPage.drawText("Student Sign.", { x: 255, y: 42, size: 9, font: boldFont });
 
-    targetPage.drawLine({ start: { x: 390, y: 55 }, end: { x: 560, y: 55 }, thickness: 1.1, color: blackColor });
     targetPage.drawText("Authorised Sign./Stamp", { x: 420, y: 42, size: 9, font: boldFont });
+
+    // Add signature and stamp images here
+    try {
+      const signaturePath = path.join(process.cwd(), 'public', 'signature.png');
+      if (fs.existsSync(signaturePath)) {
+        const sigBytes = fs.readFileSync(signaturePath);
+        let sigImage;
+        try {
+          sigImage = await pdfDoc.embedPng(sigBytes);
+        } catch {
+          sigImage = await pdfDoc.embedJpg(sigBytes);
+        }
+        targetPage.drawImage(sigImage, {
+          x: 400,
+          y: 66,
+          width: 80,
+          height: 40,
+        });
+      }
+
+      const stampPath = path.join(process.cwd(), 'public', 'stamp.png');
+      if (fs.existsSync(stampPath)) {
+        const stampBytes = fs.readFileSync(stampPath);
+        let stampImage;
+        try {
+          stampImage = await pdfDoc.embedPng(stampBytes);
+        } catch {
+          stampImage = await pdfDoc.embedJpg(stampBytes);
+        }
+        targetPage.drawImage(stampImage, {
+          x: 490,
+          y: 35,
+          width: 60,
+          height: 60,
+        });
+      }
+    } catch (err) {
+      console.error("Error embedding signature or stamp in Admission form:", err);
+    }
   };
 
   // Build Page 1
@@ -1181,7 +1257,7 @@ export async function generatePdfAdmissionFormBuffer(data: any): Promise<Buffer>
 }
 
 
-function generateEmailTemplate(type: string, data: any): string {
+function generateEmailTemplate(type: string, data: any, logoBase64: string = ""): string {
   const studentName = data.studentName || 'Student';
   const receiptNo = data.receiptNo || 'N/A';
   const date = data.date || new Date().toLocaleDateString('en-GB');
@@ -1263,57 +1339,66 @@ function generateEmailTemplate(type: string, data: any): string {
   <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; padding: 40px 20px; color: #1e293b;">
     <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); overflow: hidden; border: 1px solid #e2e8f0;">
       <!-- Top Bar -->
-      <div style="background: #f0faf4; border-bottom: 2px solid #013220; padding: 32px 24px; text-align: center;">
-        <h1 style="margin: 0; font-size: 24px; font-weight: 800; letter-spacing: 0.5px; color: #013220;">TRUSTCARE</h1>
-        <p style="margin: 4px 0 0 0; font-size: 12px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: #013220;">Institute of Health Science</p>
-        <div style="margin-top: 16px; display: inline-block; background: rgba(1, 50, 32, 0.1); color: #013220; border: 1px solid rgba(1, 50, 32, 0.2); padding: 6px 16px; border-radius: 99px; font-size: 11px; font-weight: bold; letter-spacing: 1px; text-transform: uppercase;">
+      <div style="background: #2bb6bc; border-bottom: 2px solid #14507a; padding: 24px; text-align: center;">
+        ${logoBase64 ? `<img src="cid:trustcare_logo" alt="TrustCare Logo" style="width: 80px; height: 80px; object-fit: contain; margin-bottom: 12px;" />` : ''}
+        <h1 style="margin: 0; font-size: 24px; font-weight: 800; letter-spacing: 0.5px; color: #ffffff;">TRUSTCARE</h1>
+        <p style="margin: 4px 0 0 0; font-size: 12px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: #e0f2fe;">Institute of Health Science</p>
+        <div style="margin-top: 16px; display: inline-block; background: rgba(0, 0, 0, 0.2); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.3); padding: 6px 16px; border-radius: 99px; font-size: 11px; font-weight: bold; letter-spacing: 1px; text-transform: uppercase;">
           ${receiptTypeLabel}
         </div>
       </div>
       
       <!-- Body -->
-      <div style="padding: 32px 24px;">
-        <p style="margin-top: 0; margin-bottom: 20px; font-size: 15px; line-height: 1.5;">Dear <strong>${studentName}</strong>,</p>
-        <p style="margin-top: 0; margin-bottom: 24px; font-size: 14px; line-height: 1.5; color: #475569;">
-          ${bodyHtml}
-        </p>
+      <div style="padding: 32px 24px; position: relative;">
+        ${logoBase64 ? `
+        <!-- Watermark -->
+        <div style="height: 0; max-height: 0; text-align: center; opacity: 0.05; overflow: visible; pointer-events: none;">
+          <img src="cid:trustcare_logo" style="width: 300px; height: auto; margin-top: 120px;" />
+        </div>` : ''}
         
-        <!-- Receipt Table -->
-        <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 13px;">
-          <tbody>
-            <tr style="border-bottom: 1px solid #f1f5f9;">
-              <td style="padding: 10px 0; color: #64748b; font-weight: bold;">Receipt Number</td>
-              <td style="padding: 10px 0; text-align: right; font-weight: bold; color: #1e293b;">${receiptNo}</td>
-            </tr>
-            <tr style="border-bottom: 1px solid #f1f5f9;">
-              <td style="padding: 10px 0; color: #64748b; font-weight: bold;">Date</td>
-              <td style="padding: 10px 0; text-align: right; color: #1e293b;">${date}</td>
-            </tr>
-            <tr style="border-bottom: 1px solid #f1f5f9;">
-              <td style="padding: 10px 0; color: #64748b; font-weight: bold;">Course</td>
-              <td style="padding: 10px 0; text-align: right; color: #1e293b; font-weight: 600;">${courseName}</td>
-            </tr>
-            <tr style="border-bottom: 1px solid #f1f5f9;">
-              <td style="padding: 10px 0; color: #64748b; font-weight: bold;">Payment Mode</td>
-              <td style="padding: 10px 0; text-align: right; color: #1e293b;">${paymentMode}</td>
-            </tr>
-            ${additionalRows}
-            <tr style="border-top: 2px solid #e2e8f0; font-size: 15px;">
-              <td style="padding: 14px 0 0 0; color: #1e293b; font-weight: 800;">Amount Paid</td>
-              <td style="padding: 14px 0 0 0; text-align: right; font-weight: 800; color: #0d9488;">₹${amountPaid}</td>
-            </tr>
-          </tbody>
-        </table>
-        
-        <!-- Footer Note -->
-        <div style="background-color: #f8fafc; border-left: 4px solid #0d9488; padding: 12px 16px; border-radius: 0 8px 8px 0; font-size: 12px; line-height: 1.6; color: #475569; margin-bottom: 24px;">
-          <strong>Important Notice:</strong> Fees, once paid, are non-refundable. If you want to cancel your admission, you must pay the full fees. For any queries, please reach out to the institute office.
+        <div style="position: relative; z-index: 1;">
+          <p style="margin-top: 0; margin-bottom: 20px; font-size: 15px; line-height: 1.5;">Dear <strong>${studentName}</strong>,</p>
+          <p style="margin-top: 0; margin-bottom: 24px; font-size: 14px; line-height: 1.5; color: #475569;">
+            ${bodyHtml}
+          </p>
+          
+          <!-- Receipt Table -->
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 13px;">
+            <tbody>
+              <tr style="border-bottom: 1px solid #f1f5f9;">
+                <td style="padding: 10px 0; color: #64748b; font-weight: bold;">Receipt Number</td>
+                <td style="padding: 10px 0; text-align: right; font-weight: bold; color: #1e293b;">${receiptNo}</td>
+              </tr>
+              <tr style="border-bottom: 1px solid #f1f5f9;">
+                <td style="padding: 10px 0; color: #64748b; font-weight: bold;">Date</td>
+                <td style="padding: 10px 0; text-align: right; color: #1e293b;">${date}</td>
+              </tr>
+              <tr style="border-bottom: 1px solid #f1f5f9;">
+                <td style="padding: 10px 0; color: #64748b; font-weight: bold;">Course</td>
+                <td style="padding: 10px 0; text-align: right; color: #1e293b; font-weight: 600;">${courseName}</td>
+              </tr>
+              <tr style="border-bottom: 1px solid #f1f5f9;">
+                <td style="padding: 10px 0; color: #64748b; font-weight: bold;">Payment Mode</td>
+                <td style="padding: 10px 0; text-align: right; color: #1e293b;">${paymentMode}</td>
+              </tr>
+              ${additionalRows}
+              <tr style="border-top: 2px solid #e2e8f0; font-size: 15px;">
+                <td style="padding: 14px 0 0 0; color: #1e293b; font-weight: 800;">Amount Paid</td>
+                <td style="padding: 14px 0 0 0; text-align: right; font-weight: 800; color: #0d9488;">₹${amountPaid}</td>
+              </tr>
+            </tbody>
+          </table>
+          
+          <!-- Footer Note -->
+          <div style="background-color: #f8fafc; border-left: 4px solid #0d9488; padding: 12px 16px; border-radius: 0 8px 8px 0; font-size: 12px; line-height: 1.6; color: #475569; margin-bottom: 24px;">
+            <strong>Important Notice:</strong> Fees, once paid, are non-refundable. If you want to cancel your admission, you must pay the full fees. For any queries, please reach out to the institute office.
+          </div>
+          
+          <p style="margin: 0; font-size: 13px; color: #64748b;">
+            Best regards,<br />
+            <strong style="color: #013220;">TrustCare Institute of Health Science</strong>
+          </p>
         </div>
-        
-        <p style="margin: 0; font-size: 13px; color: #64748b;">
-          Best regards,<br />
-          <strong style="color: #013220;">TrustCare Institute of Health Science</strong>
-        </p>
       </div>
       
       <!-- Footer -->
@@ -1353,7 +1438,19 @@ export async function POST(req: Request) {
     } else if (type === 'admission_form') {
       subject = `Official Admission Form - ${data.studentName || ''} (${data.enrollmentId || ''}) - Trustcare Institute Of Health Science`;
     }
-    const htmlContent = generateEmailTemplate(type, data);
+    
+    let logoBase64 = "";
+    try {
+      const logoPath = path.join(process.cwd(), 'public', 'TrustCareLogo.png');
+      if (fs.existsSync(logoPath)) {
+        const logoBuffer = fs.readFileSync(logoPath);
+        logoBase64 = logoBuffer.toString('base64');
+      }
+    } catch (e) {
+      console.error("Could not load logo for email:", e);
+    }
+    
+    const htmlContent = generateEmailTemplate(type, data, logoBase64);
 
     // Generate PDF copy of the receipt
     let attachments: any[] = [];
@@ -1389,6 +1486,16 @@ export async function POST(req: Request) {
         type: 'application/pdf',
         disposition: 'attachment',
       });
+      
+      if (logoBase64) {
+        attachments.push({
+          content: logoBase64,
+          filename: 'TrustCareLogo.png',
+          type: 'image/png',
+          disposition: 'inline',
+          content_id: 'trustcare_logo',
+        });
+      }
 
       console.log(`[send-email] PDF generated: ${filename} (${pdfBuffer.length} bytes)`);
     } catch (pdfErr) {
